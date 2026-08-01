@@ -1,7 +1,11 @@
 <?php
 session_start();
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+include('inc/auth.php');
 include('config/db.php');
-include('auth.php');
 $currentPage = basename($_SERVER['PHP_SELF']);
 $isUsersPage = true;
 $result = $conn->query("

@@ -1,6 +1,10 @@
 <?php
 session_start();
-include('auth.php');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+include('inc/auth.php');
 include('config/db.php');
 $currentPage = basename($_SERVER['PHP_SELF']);
 $isUsersPage = true;
@@ -181,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 			</select>
 		</div>
 		
-		<button class="button-primary px-5 py-2.5 text-sm" type="submit">Edit User</button>
+		<button class="button-primary px-5 py-2.5 text-sm" type="submit">Save Changes</button>
 	</form>
 <script src="js/login.js"></script>
 </body>

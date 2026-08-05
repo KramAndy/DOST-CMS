@@ -7,7 +7,9 @@ var API_URLS = {
   statistics: 'api/get_statistics.php',
   referenceSettings: 'api/get_reference_settings.php',
   saveReferenceSettings: 'api/save_reference_settings.php',
-  generateReference: 'api/generate_reference.php'
+  generateReference: 'api/generate_reference.php',
+  notifications: 'api/get_notifications.php',
+  markNotificationRead: 'api/mark_notification_read.php'
 };
 
 function apiGet(url, params) {
@@ -20,6 +22,7 @@ function apiGet(url, params) {
 function apiPost(url, data) {
   var formData = new URLSearchParams();
   Object.keys(data).forEach(function(k) { formData.append(k, data[k]); });
+  if (window.CSRF_TOKEN) formData.append('csrf_token', window.CSRF_TOKEN);
   return fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -43,8 +46,8 @@ function addUpdate(reference, notes) {
   return apiPost(API_URLS.addUpdate, { reference: reference, notes: notes });
 }
 
-function registerDocument(type, title, origin, registeredBy) {
-  return apiPost(API_URLS.register, { type: type, title: title, origin: origin, registered_by: registeredBy });
+function registerDocument(type, title, origin, direction) {
+  return apiPost(API_URLS.register, { type: type, title: title, origin: origin, direction: direction || 'Incoming' });
 }
 
 function getStatistics() {

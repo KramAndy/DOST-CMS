@@ -1,0 +1,196 @@
+==============================================================================
+DOST CMS — SECURITY & HARDENING AUDIT REPORT
+==============================================================================
+Date:       Aug 05, 2026
+Scope:      Authentication, Authorization, Input Validation, SQL Injection,
+            XSS, CSRF, File Security, Session Security, Error Handling,
+            Sensitive Data, General Security Review.
+Constraint: No new features, no UI redesign. Existing behavior preserved.
+
+Result:     10 vulnerabilities fixed (1 Critical, 4 High, 5 Medium).
+            5 areas verified clean (no change required).
+            3 recommendations documented (no code change).
+
+----------------------------------------------------------------------------
+CRITICAL
+----------------------------------------------------------------------------
+VULN-01  STORED XSS via Document Table
+  Severity:  Critical
+  Affected:  js/ui/table.js (buildDocumentRow / buildDetailRow)
+  Root cause: User-supplied document title, origin, registered-by, reference
+              and status were concatenated into innerHTML without escaping.
+              Any user could register a document whose title contained
+              <img onerror=...> and execute script for every user viewing
+              the dashboard.
+  Fix applied: All dynamic values now pass through escapeHtml() (added to
+              js/utils/dom.js). Payloads such as "<img src=x onerror=alert(1)>"
+              are neutralized to text.
+  Verified:    node unit test confirmed all payloads fully escaped; grep
+              confirmed no remaining raw concatenation of doc.* fields.
+
+----------------------------------------------------------------------------
+HIGH
+----------------------------------------------------------------------------
+VULN-02  STORED XSS via Timeline Notes
+  Severity:  High
+  Affected:  js/ui/timeline.js (loadTimeline)
+  Root cause: Timeline notes, updated-by and status inserted into innerHTML
+              unescaped. Notes are fully user-controlled (api/add_update.php).
+  Fix applied: escapeHtml() applied to notes, updated_by, status, timestamp.
+  Verified:   Code review + node unit test of escapeHtml.
+
+VULN-03  STORED/REFLECTED XSS via Toasts
+  Severity:  High
+  Affected:  js/ui/toast.js, index.php
+  Root cause: showToast() inserted the message into innerHTML unescaped.
+              Reference strings (composed partly from the user-editable
+              prefix/separator settings) flow into toasts.
+  Fix applied: showToast() now escapes its message. The one intentional-HTML
+              call (Account Inactive toast) converted to plain text.
+  Verified:   node unit test; no remaining unescaped showToast call sites.
+
+VULN-04  XSS via Notification Message / Attributes
+  Severity:  High
+  Affected:  js/ui/notifications.js (buildNotificationItem)
+  Root cause: notification message rendered unescaped (only title was
+              escaped); notification_id / reference_number attributes not
+              escaped.
+  Fix applied: message and attributes escaped before insertion; the
+              reference highlight uses escapeHtml on the matched value.
+  Verified:   node unit test of the message-wrapping logic.
+
+VULN-05  No CSRF Protection on Any State-Changing Action
+  Severity:  High
+  Affected:  index.php (login), add-users.php, edit-users.php,
+             api/register_document.php, api/update_status.php,
+             api/add_update.php, api/mark_notification_read.php,
+             api/save_reference_settings.php
+  Root cause: No anti-CSRF tokens anywhere. A malicious site could forge
+              POSTs (register documents, change status, create users, etc.)
+              using a victim's session.
+  Fix applied:
+    - New inc/csrf.php (csrf_token / csrf_field / csrf_verify using
+      random_bytes + hash_equals).
+    - Login form + Add/Edit user forms now include csrf_field(); handlers
+      verify the token and reject with "Invalid request." otherwise.
+    - inc/header.php emits window.CSRF_TOKEN on every authenticated page.
+    - js/services/documentService.js apiPost() automatically appends
+      csrf_token to every POST; all state-changing APIs return 403
+      "Invalid CSRF token" when it is missing/invalid.
+  Verified:   Automated tests: login/register/status/add-update/mark-read/
+              save-settings WITHOUT token -> 403 or "Invalid request";
+              WITH token -> success.
+
+----------------------------------------------------------------------------
+MEDIUM
+----------------------------------------------------------------------------
+VULN-06  Username Enumeration on Login
+  Severity:  Medium
+  Affected:  index.php
+  Root cause: Distinct errors "User does not exist!" vs "Incorrect Password."
+              reveal whether an account exists.
+  Fix applied: Unified message "Invalid username or password." for both
+              failure branches.
+  Verified:   POST for a non-existent user returns only the generic message.
+
+VULN-07  Database Error Disclosure
+  Severity:  Medium
+  Affected:  config/db.php, add-users.php
+  Root cause: config/db.php echoed $conn->connect_error (host/credentials
+              hints) via die(); add-users.php echoed $stmt->error.
+  Fix applied: Both now log via error_log() and show a generic user-facing
+              message ("Service temporarily unavailable..." /
+              "Failed to add user. Please try again.").
+  Verified:   Code review; display_errors=0 confirmed in production mode.
+
+VULN-08  Session Cookie Hardening Missing
+  Severity:  Medium
+  Affected:  all pages and api/*.php (session_start())
+  Root cause: Sessions started without HttpOnly/SameSite/secure flags or
+              strict-mode enforcement.
+  Fix applied: New inc/session.php secure_session_start() sets
+              use_strict_mode, use_only_cookies, cookie_httponly,
+              cookie_samesite=Lax, and cookie_secure over HTTPS. Replaced
+              every bare session_start() across all 18 entry files.
+  Verified:   Response header now shows
+              Set-Cookie: PHPSESSID=...; path=/; HttpOnly; SameSite=Lax
+
+VULN-09  Unauthenticated Write Endpoint
+  Severity:  Medium
+  Affected:  api/run_overdue_check.php
+  Root cause: Endpoint could trigger notification creation over HTTP with no
+              authentication (no api_auth.php).
+  Fix applied: HTTP requests now require a valid session AND CSRF token;
+              CLI (cron) execution remains open. Requires made __DIR__-based
+              so the documented "php api/run_overdue_check.php" example now
+              works from any working directory (was previously CWD-dependent
+              and broken).
+  Verified:   HTTP without session -> 401; with session no token -> 403;
+              with token -> success; CLI -> success.
+
+VULN-10  Server-Side Input Validation Gaps
+  Severity:  Medium
+  Affected:  add-users.php, edit-users.php, api/register_document.php,
+             api/add_update.php, api/save_reference_settings.php
+  Root cause: add-users.php had no server-side empty-field checks and no
+              status whitelist; edit-users.php had no status whitelist;
+              register/add-update had no length caps; save_reference_settings
+              accepted unbounded padding.
+  Fix applied: Server-side required-field checks; status whitelisted to
+              active/inactive; title<=255, origin<=150, notes<=2000,
+              padding 1..12, include_year coerced to 0/1.
+  Verified:   Automated tests: empty fields rejected, short/mismatched
+              passwords rejected, >255 title rejected, invalid status
+              rejected.
+
+----------------------------------------------------------------------------
+VERIFIED CLEAN (no change required)
+----------------------------------------------------------------------------
+SQL INJECTION (Phase 4)     All queries use prepared statements or static
+                            SQL; dynamic ORDER BY/LIMIT absent; no
+                            mysqli_query with user input. generateReferenceNumber
+                            uses bind-param LIKE.  Verified by full review.
+FILE SECURITY (Phase 7)     No file upload/download functionality exists.
+                            Section N/A.
+DIRECTORY TRAVERSAL (Ph.11) No user-controlled file operations or includes;
+                            all require/include paths are static.
+PASSWORD HANDLING (Ph.10)   password_hash()/password_verify() used; hashes
+                            never output; no secrets in HTML/JS/API.
+AUTH CHECKS (Phase 1/2)     Protected pages redirect unauthenticated users;
+                            all APIs return 401 via api_auth.php. Verified:
+                            dashboard/users/add-users -> 302, APIs -> 401.
+
+----------------------------------------------------------------------------
+DOCUMENTED RECOMMENDATIONS (not implemented - would change behavior)
+----------------------------------------------------------------------------
+REC-01  Session timeout: not implemented. Add an idle timeout (e.g. 30 min)
+        in inc/auth.php if desired. Low.
+REC-02  Brute-force protection: no login rate limiting. Add attempt
+        counters/sleeps or a fail2ban layer. Low.
+REC-03  Role-based authorization: any authenticated user can manage users.
+        Requires a roles schema change (new feature) to restrict user
+        management to administrators. Accepted by design for now. Low.
+REC-04  PHP config: set display_errors=Off, session.cookie_secure=1 and
+        HTTPS in production. Code now enforces display_errors=Off unless
+        APP_DEBUG=1; DB credentials may be supplied via env vars
+        (DB_HOST/DB_USER/DB_PASS/DB_NAME) instead of hardcoded defaults.
+
+----------------------------------------------------------------------------
+REGRESSION & VERIFICATION SUMMARY
+----------------------------------------------------------------------------
+- All PHP files pass php -l; all JS files pass node --check.
+- Full functional regression: login (CSRF), dashboard render (no warnings,
+  token present), register, status transitions, timeline, statistics,
+  reference generation, notifications, add-user, edit-user, logout -> all
+  pass with the new protections in place.
+- DB restored to pre-test state: documents=5, users=2, notifications=0.
+- Security tests run: unauthenticated access blocked (302/401), direct
+  access to config/db.php and inc/ helpers blocked (404), login CSRF
+  (wrong/no token blocked, valid token 302), API CSRF (403 without token),
+  run_overdue_check HTTP auth gate (401/403), logout invalidates session,
+  XSS payloads neutralized, error pages generic.
+
+==============================================================================
+VERDICT: SECURITY ISSUES ADDRESSED. APP READY FOR DEPLOYMENT
+         WITH REC-04 (HTTPS + env vars) APPLIED AT THE HOST.
+==============================================================================

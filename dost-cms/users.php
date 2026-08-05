@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/inc/session.php';
+secure_session_start();
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
@@ -85,5 +86,25 @@ $result = $conn->query("
 	  </div>
 	</div>
 
+	<!-- Toast Notification Area -->
+	<div id="notification-toast-area" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+  <script src="js/utils/dom.js"></script>
+  <script src="js/utils/dates.js"></script>
+  <script src="js/ui/toast.js"></script>
+  <script src="js/services/documentService.js"></script>
+  <script src="js/services/notificationService.js"></script>
+  <script src="js/ui/notifications.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('success') === '1') {
+      showToast('User added successfully', 'success');
+    }
+    if (params.get('updated') === '1') {
+      showToast('User updated successfully', 'success');
+    }
+  });
+  </script>
 </body>
 </html>

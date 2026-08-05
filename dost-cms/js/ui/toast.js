@@ -5,7 +5,7 @@ function showToast(message, toastType) {
   const toastElement = createHTMLElement(
     '<div class="toast-notification text-white text-xs px-4 py-3 rounded-lg flex items-center gap-2 max-w-xs" style="background:' + backgroundColor + '">' +
     '<i class="fa-solid ' + iconClass + ' text-[11px]"></i>' +
-    '<span>' + message + '</span>' +
+    '<span>' + escapeHtml(message) + '</span>' +
     '</div>'
   );
   querySelector('#notification-toast-area').appendChild(toastElement);

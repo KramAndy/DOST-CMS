@@ -1,16 +1,18 @@
 <?php
-session_start();
+require_once __DIR__ . '/inc/session.php';
+secure_session_start();
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 
 include('inc/auth.php');
 include('config/db.php');
+require_once __DIR__ . '/inc/csrf.php';
 $currentPage = basename($_SERVER['PHP_SELF']);
 $isUsersPage = true;
 
-$user_id = $_GET['user_id'] ?? null;
-if (!$user_id) {
+$user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+if ($user_id <= 0) {
     header("Location: users.php");
     exit();
 }
@@ -30,15 +32,24 @@ if (!$item) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF guard before any state change.
+    if (!csrf_verify()) {
+        $error = "Invalid request. Please try again.";
+    }
+
+    if (empty($error)) {
     // Sanitize inputs
-    $username = strtolower(trim($_POST['username']));
-    $employee_name = trim($_POST['employee_name']);
-    $password      = trim($_POST['password']);
-    $confirm       = trim($_POST['confirm']);
+    $username = strtolower(trim($_POST['username'] ?? ''));
+    $employee_name = trim($_POST['employee_name'] ?? '');
+    $password      = trim($_POST['password'] ?? '');
+    $confirm       = trim($_POST['confirm'] ?? '');
 	$status = $_POST['status'] ?? '';
-   
+
    if (!empty($password) && strlen($password) < 4) {
     $error = "Password must be at least 4 characters.";
+	}
+    if (empty($error) && !in_array($status, ['active', 'inactive'], true)) {
+        $error = "Invalid status selected.";
 	}
 
 
@@ -56,11 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	} 
 
 
-   if (empty($username)|| empty($employee_name) || empty($status)) {
+   if (empty($error) && (empty($username) || empty($employee_name) || empty($status))) {
         $error = "All fields except password are required.";
-    } elseif (!empty($password) && $password !== $confirm) {
+    } elseif (empty($error) && !empty($password) && $password !== $confirm) {
         $error = "Passwords do not match.";
-    } else {
+    } elseif (empty($error)) {
         // Base query
         $update_query = "UPDATE users 
                  SET username=?, employee_name=?, status=?";
@@ -94,8 +105,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		exit();
 		} else {
 			$stmt->close();
+			error_log('[edit-users] update failed: ' . $stmt->error);
 			$error = "Failed to update user.";
 		}
+    }
     }
 }
 ?>
@@ -138,7 +151,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     ?>
 	</nav>
+	<?php if (isset($error)): ?>
+	<div class="error-message user-form-error">
+		<i class="fa-solid fa-circle-exclamation"></i>
+		<span><?= htmlspecialchars($error) ?></span>
+	</div>
+	<?php endif; ?>
 	<form method="POST" onsubmit="return validatePasswords();" class="user-form">
+		<?= csrf_field() ?>
 
 		<div class="form-group">
 			<label for="username">Username</label>
@@ -163,16 +183,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		<div class="form-group">
 			<label for="password">Password</label>
 			<div class="input-wrapper">
-				<input type="password" name="password" id="password" class="flat-field w-full px-3 py-2.5 text-sm">
-				<i class="fa-solid fa-eye" onclick="toggleVisibility('password', this)"></i>
+				<input type="password" name="password" id="password" class="flat-field w-full px-3 py-2.5 text-sm js-password-field">
+				<i class="fa-solid fa-eye js-password-toggle" onclick="toggleVisibility(this)"></i>
 			</div>
 		</div>
 
 		<div class="form-group">
 			<label for="confirm">Confirm Password</label>
 			<div class="input-wrapper">
-				<input type="password" name="confirm" id="confirm" class="flat-field w-full px-3 py-2.5 text-sm">
-				<i class="fa-solid fa-eye" onclick="toggleVisibility('confirm', this)"></i>
+				<input type="password" name="confirm" id="confirm" class="flat-field w-full px-3 py-2.5 text-sm js-password-field">
+				<i class="fa-solid fa-eye js-password-toggle" onclick="toggleVisibility(this)"></i>
 			</div>
 		</div>
 		
@@ -187,6 +207,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		
 		<button class="button-primary px-5 py-2.5 text-sm" type="submit">Save Changes</button>
 	</form>
-<script src="js/login.js"></script>
+
+	<!-- Toast Notification Area -->
+	<div id="notification-toast-area" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+	<script src="js/utils/dom.js"></script>
+	<script src="js/utils/dates.js"></script>
+	<script src="js/ui/toast.js"></script>
+	<script src="js/services/documentService.js"></script>
+	<script src="js/services/notificationService.js"></script>
+	<script src="js/ui/notifications.js"></script>
+	<script src="js/login.js"></script>
 </body>
 </html>

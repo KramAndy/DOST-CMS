@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/inc/session.php';
+secure_session_start();
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
@@ -17,16 +18,23 @@ $currentPage = basename($_SERVER['PHP_SELF']);
   <title>Communication Management System · DOST Region V</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/document.css">
+  <link rel="stylesheet" href="css/dashboard-refresh.css">
 </head>
-<body>
+<body class="dashboard-page">
+
+  <!-- Animated Gradient Background -->
+  <div class="bg-animated" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+  </div>
 
   <!-- Top Accent Stripe -->
   <div class="h-[3px] bg-[var(--accent)]"></div>
 
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
 
     <!-- ======================== PAGE HEADER ======================== -->
 <?php include('inc/header.php'); ?>
@@ -70,10 +78,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <div class="flat-card p-5 lg:sticky lg:top-6">
           <div class="generator-header flex items-center justify-between mb-5">
             <div class="generator-title-group flex items-center gap-2.5">
-              <div class="generator-icon w-8 h-8 rounded-lg bg-[var(--accent)] text-white flex items-center justify-center text-[13px]">
+              <div class="generator-icon w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent-dark)] flex items-center justify-center text-[13px]">
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
               </div>
-              <h2 class="generator-heading text-base font-bold">Reference Generator</h2>
+              <h2 class="generator-heading font-display text-base font-bold">Reference Generator</h2>
             </div>
             <button id="open-format-settings-button" class="settings-trigger text-[var(--muted)] hover:text-[var(--accent)] transition-colors p-1.5 rounded-md hover:bg-[var(--bg)]" title="Configure Format">
               <i class="fa-solid fa-gear text-sm"></i>
@@ -93,6 +101,14 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </div>
 
             <div class="form-group">
+              <label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-1.5">Document Direction</label>
+              <select id="document-direction-selector" class="flat-field mt-0 w-full px-3 py-2.5 text-sm cursor-pointer appearance-none">
+                <option value="Incoming">Incoming</option>
+                <option value="Outgoing">Outgoing</option>
+              </select>
+            </div>
+
+            <div class="form-group">
               <label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-1.5">Document Title / Subject</label>
               <input id="document-title-input" type="text" placeholder="e.g. Request for IT Equipment" class="flat-field w-full px-3 py-2.5 text-sm">
             </div>
@@ -106,7 +122,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
               <div class="preview-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1">Generated Reference No.</div>
               <div id="reference-number-preview" class="preview-value font-mono text-base font-bold text-[var(--accent)] break-all leading-snug">—</div>
             </div>
-				<input type="hidden" id="registered-by" value="<?= htmlspecialchars($_SESSION['username'], ENT_QUOTES, 'UTF-8') ?>">
             <button id="register-document-button" class="button-primary w-full text-sm px-5 py-2.5 flex items-center justify-center gap-2">
               <i class="fa-solid fa-plus text-[11px]"></i> Register & Track Document
             </button>
@@ -121,20 +136,20 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           <div class="tracker-toolbar p-5 border-b border-[var(--line)]">
             <div class="toolbar-top-row flex items-center justify-between mb-4 flex-wrap gap-3">
               <div class="tracker-title-group flex items-center gap-2.5">
-                <div class="tracker-icon w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center text-[13px]">
+                <div class="tracker-icon w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent-dark)] flex items-center justify-center text-[13px]">
                   <i class="fa-solid fa-satellite-dish"></i>
                 </div>
-                <h2 class="tracker-heading text-base font-bold">Document Tracker</h2>
+                <h2 class="tracker-heading font-display text-base font-bold">Document Tracker</h2>
               </div>
-              <div class="search-wrapper relative w-full sm:w-60">
-                <input type="text" id="document-search-input" placeholder="Search ref no or title..." class="flat-field w-full pl-8 pr-3 py-2 text-sm">
-                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-[11px]"></i>
+              <div class="search-wrapper relative w-full sm:w-64">
+                <input type="text" id="document-search-input" placeholder="Search ref no or title..." class="flat-field w-full pl-9 pr-3 py-2 text-sm">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-xs"></i>
               </div>
             </div>
 
             <!-- Type Filter Chips -->
-            <div class="type-filter-row flex items-center gap-2 overflow-x-auto pb-2">
-              <button class="filter-chip is-selected px-3.5 py-1.5 text-[11px] whitespace-nowrap" data-filter="ALL">All</button>
+            <div class="type-filter-row flex items-center gap-2 overflow-x-auto pb-3">
+              <button class="filter-chip is-selected px-3.5 py-1.5 text-[11px] whitespace-nowrap" data-filter="ALL">All Documents</button>
               <button class="filter-chip px-3.5 py-1.5 text-[11px] whitespace-nowrap" data-filter="IM">Internal Memo</button>
               <button class="filter-chip px-3.5 py-1.5 text-[11px] whitespace-nowrap" data-filter="EL">External Letters</button>
               <button class="filter-chip px-3.5 py-1.5 text-[11px] whitespace-nowrap" data-filter="SO">Special Order</button>
@@ -143,8 +158,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </div>
 
             <!-- Date Filters -->
-            <div class="date-filter-row flex items-center gap-3 mt-3">
-              <span class="date-filter-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold flex-shrink-0">Period:</span>
+            <div class="date-filter-row flex items-center gap-3 mt-4 flex-wrap">
+              <span class="date-filter-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold flex-shrink-0">Date Filter:</span>
               <select id="month-filter-selector" class="flat-field px-2.5 py-1.5 text-[11px] cursor-pointer w-full sm:w-auto">
                 <option value="ALL">All Months</option>
                 <option value="0">January</option><option value="1">February</option><option value="2">March</option>
@@ -176,12 +191,19 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                   <th class="px-5 py-3">Title / Subject</th>
                   <th class="px-5 py-3 hidden md:table-cell">Date</th>
                   <th class="px-5 py-3">Status</th>
-                  <th class="px-5 py-3 text-right w-12"></th>
+                  <th class="px-5 py-3 text-right w-12">Action</th>
                 </tr>
               </thead>
-              <tbody id="document-table-body"></tbody>
+              <tbody id="document-table-body">
+                <tr>
+                  <td colspan="5" class="px-5 py-10 text-center">
+                    <i class="fa-solid fa-spinner fa-spin text-[var(--muted)]"></i>
+                    <span class="text-xs text-[var(--muted)] ml-2">Loading documents...</span>
+                  </td>
+                </tr>
+              </tbody>
             </table>
-            <div id="no-documents-message" class="text-center py-14 px-6">
+            <div id="no-documents-message" class="text-center py-14 px-6 hidden">
               <div class="empty-state-icon w-14 h-14 rounded-full bg-[var(--bg)] border border-[var(--line)] flex items-center justify-center mx-auto mb-4">
                 <i class="fa-solid fa-folder-open text-xl text-[var(--line)]"></i>
               </div>
@@ -208,10 +230,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <div class="modal-panel flat-card relative bg-white p-6 w-full max-w-lg">
       <div class="modal-header-row flex items-center justify-between mb-6">
         <div class="modal-title-group flex items-center gap-2.5">
-          <div class="modal-icon w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center text-[13px]">
+          <div class="modal-icon w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent-dark)] flex items-center justify-center text-[13px]">
             <i class="fa-solid fa-sliders"></i>
           </div>
-          <h2 class="modal-heading text-base font-bold">Configure Reference Format</h2>
+          <h2 class="modal-heading font-display text-base font-bold">Configure Reference Format</h2>
         </div>
         <button id="close-modal-button" class="modal-close-trigger text-[var(--muted)] hover:text-[var(--ink)] p-1.5 rounded-md hover:bg-[var(--bg)] transition-colors">
           <i class="fa-solid fa-xmark"></i>
@@ -257,10 +279,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
   <script src="js/utils/formatter.js"></script>
   <script src="js/ui/toast.js"></script>
   <script src="js/services/documentService.js"></script>
+  <script src="js/services/notificationService.js"></script>
   <script src="js/ui/filters.js"></script>
   <script src="js/ui/modal.js"></script>
   <script src="js/ui/table.js"></script>
   <script src="js/ui/timeline.js"></script>
+  <script src="js/ui/notifications.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

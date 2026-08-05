@@ -5,23 +5,23 @@ function buildDocumentRow(doc, isExpanded) {
   var tagClass = documentTypeRegistry[doc.type] ? documentTypeRegistry[doc.type].tagClass : 'tag-internal-memo';
 
   return createHTMLElement(
-    '<tr class="document-row animate-fade-up ' + (isExpanded ? 'is-expanded' : '') + '" data-ref="' + doc.ref + '">' +
+    '<tr class="document-row animate-fade-up ' + (isExpanded ? 'is-expanded' : '') + '" data-ref="' + escapeHtml(doc.ref) + '">' +
       '<td class="px-5 py-3.5 align-top w-[26%]">' +
-        '<div class="ref-number font-mono text-[11px] font-bold text-[var(--ink)]">' + doc.ref + '</div>' +
-        '<span class="document-type-tag ' + tagClass + ' mt-1 inline-block">' + doc.type + '</span>' +
+        '<div class="ref-number font-mono text-[11px] font-bold text-[var(--ink)]">' + escapeHtml(doc.ref) + '</div>' +
+        '<span class="document-type-tag ' + tagClass + ' mt-1 inline-block">' + escapeHtml(doc.type) + '</span>' +
       '</td>' +
       '<td class="px-5 py-3.5 align-top">' +
-        '<div class="doc-title-text font-semibold text-[13px] text-[var(--ink)] leading-snug">' + doc.title + '</div>' +
+        '<div class="doc-title-text font-semibold text-[13px] text-[var(--ink)] leading-snug">' + escapeHtml(doc.title) + '</div>' +
         '<div class="doc-origin-text text-[11px] text-[var(--muted)] mt-1">' +
-          '<div><i class="fa-solid fa-building text-[9px] mr-1 opacity-60"></i>' + doc.origin + '</div>' +
-          '<div class="mt-1"><i class="fa-solid fa-user text-[9px] mr-1 opacity-60"></i>' + doc.registeredBy + '</div>' +
+          '<div><i class="fa-solid fa-building text-[9px] mr-1 opacity-60"></i>' + escapeHtml(doc.origin) + '</div>' +
+          '<div class="mt-1"><i class="fa-solid fa-user text-[9px] mr-1 opacity-60"></i>' + escapeHtml(doc.registeredBy) + '</div>' +
         '</div>' +
       '</td>' +
       '<td class="px-5 py-3.5 align-top hidden md:table-cell">' +
         '<div class="doc-date-text text-[11px] text-[var(--muted)] font-medium whitespace-nowrap">' + formatDisplayDate(doc.date) + '</div>' +
       '</td>' +
       '<td class="px-5 py-3.5 align-top">' +
-        '<span class="status-indicator ' + statusModifier + '">' + doc.status + '</span>' +
+        '<span class="status-indicator ' + statusModifier + '">' + escapeHtml(doc.status) + '</span>' +
       '</td>' +
       '<td class="px-5 py-3.5 align-top text-right">' +
         '<button class="row-expand-trigger text-[var(--muted)] hover:text-[var(--accent)] transition-colors p-1">' +
@@ -54,16 +54,16 @@ function buildDetailRow(doc, safeId) {
             '<div class="preset-buttons-group mb-4">' +
               '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-2">Quick Status Presets</label>' +
               '<div class="preset-buttons-row flex flex-wrap gap-2">' +
-                '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Received' ? 'is-active-preset' : '') + '" data-ref="' + doc.ref + '" data-status="Received">Received</button>' +
-                '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Processing' ? 'is-active-preset' : '') + '" data-ref="' + doc.ref + '" data-status="Processing">Processing</button>' +
-                '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Dispatched' ? 'is-active-preset' : '') + '" data-ref="' + doc.ref + '" data-status="Dispatched">Dispatched</button>' +
+                '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Received' ? 'is-active-preset' : '') + '" data-ref="' + escapeHtml(doc.ref) + '" data-status="Received">Received</button>' +
+                '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Processing' ? 'is-active-preset' : '') + '" data-ref="' + escapeHtml(doc.ref) + '" data-status="Processing">Processing</button>' +
+                '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Dispatched' ? 'is-active-preset' : '') + '" data-ref="' + escapeHtml(doc.ref) + '" data-status="Dispatched">Dispatched</button>' +
               '</div>' +
             '</div>' +
             '<div class="update-notes-group">' +
               '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-1.5">Update Notes</label>' +
               '<textarea id="update-notes-' + safeId + '" rows="3" placeholder="Enter details about this update..." class="flat-field w-full px-3 py-2.5 text-sm resize-none"></textarea>' +
             '</div>' +
-            '<button class="submit-update-button button-primary w-full text-[11px] font-medium px-4 py-2.5 flex items-center justify-center gap-2 mt-3" data-ref="' + doc.ref + '">' +
+            '<button class="submit-update-button button-primary w-full text-[11px] font-medium px-4 py-2.5 flex items-center justify-center gap-2 mt-3" data-ref="' + escapeHtml(doc.ref) + '">' +
               '<i class="fa-solid fa-paper-plane text-[10px]"></i> Submit Update' +
             '</button>' +
           '</div>' +
@@ -111,7 +111,7 @@ function renderDocumentTable() {
   var emptyMessage = querySelector('#no-documents-message');
   tableBody.innerHTML = '';
 
-  getFilteredDocuments({
+  var pendingRender = getFilteredDocuments({
     type: activeTypeFilter,
     year: activeYearFilter,
     month: activeMonthFilter,
@@ -121,7 +121,7 @@ function renderDocumentTable() {
       emptyMessage.classList.remove('hidden');
     } else {
       emptyMessage.classList.add('hidden');
-      filteredDocuments.slice().reverse().forEach(function(doc) {
+      filteredDocuments.forEach(function(doc) {
         var isExpanded = currentlyExpandedRef === doc.ref;
         tableBody.appendChild(buildDocumentRow(doc, isExpanded));
         if (isExpanded) {
@@ -132,6 +132,7 @@ function renderDocumentTable() {
     }
     loadTimeline(currentlyExpandedRef);
   });
+  return pendingRender;
 }
 
 function refreshStatistics() {
@@ -163,6 +164,8 @@ document.addEventListener('click', function(e) {
         renderDocumentTable();
         refreshStatistics();
         showToast('Status updated to ' + presetBtn.dataset.status, 'success');
+      } else {
+        showToast('Failed to update status: ' + (data.message || 'unknown error'), 'warn');
       }
     });
     return;
@@ -182,6 +185,8 @@ document.addEventListener('click', function(e) {
         notesField.value = '';
         renderDocumentTable();
         showToast('Update added to timeline', 'success');
+      } else {
+        showToast('Failed to add update: ' + (data.message || 'unknown error'), 'warn');
       }
     });
   }

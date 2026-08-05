@@ -1,19 +1,34 @@
-<?php $isUsersPage = $isUsersPage ?? false; ?>
-    <header class="mb-8">
+<?php
+require_once __DIR__ . '/csrf.php';
+$isUsersPage = $isUsersPage ?? false;
+?>
+    <header class="mb-8 sm:mb-12">
+      <script>window.CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;</script>
       <div class="header-top-bar flex items-center justify-between mb-8 gap-4 flex-wrap">
         <div class="brand-mark flex items-center gap-3">
-          <div class="brand-logo w-11 h-11 flex-shrink-0">
+          <div class="brand-logo logo-tile w-11 h-11 flex-shrink-0">
             <img class="logo" src="images/logo.png" alt="logo">
           </div>
           <div class="brand-text">
             <div class="brand-subtitle text-[10px] uppercase tracking-[0.18em] text-[var(--muted)] font-semibold">DOST Regional Office No. V</div>
-            <div class="brand-title text-sm font-bold tracking-tight">Communication Management System</div>
+            <div class="brand-title font-display text-sm font-bold tracking-tight">Communication Management System</div>
           </div>
         </div>
         <div class="header-actions flex items-center gap-3">
-          <button class="button-secondary text-xs font-medium px-4 py-2 flex items-center gap-2">
-            <i class="fa-solid fa-bell text-[11px]"></i> Notifications
-          </button>
+          <div class="relative" id="notification-container">
+            <button id="notification-bell-button" class="button-secondary text-xs font-medium px-4 py-2 flex items-center gap-2 relative" title="Notifications">
+              <i class="fa-solid fa-bell text-[11px]"></i>
+              <span class="hidden sm:inline">Notifications</span>
+              <span id="notification-badge" class="notification-badge hidden">0</span>
+            </button>
+            <div id="notification-dropdown" class="notification-dropdown hidden">
+              <div class="notification-dropdown-header flex items-center justify-between px-4 py-3 border-b border-[var(--line)]">
+                <span class="text-sm font-bold">Notifications</span>
+                <button id="mark-all-notifications-read" class="notification-action-trigger text-[11px] font-medium">Mark all read</button>
+              </div>
+              <div id="notification-list" class="notification-list max-h-96 overflow-y-auto"></div>
+            </div>
+          </div>
           <div class="relative" id="avatar-container">
             <button id="avatar-btn" class="user-avatar w-9 h-9 rounded-full bg-[var(--accent)] flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0 cursor-pointer">
             <?php
@@ -53,9 +68,9 @@
       <div class="header-intro border-b border-[var(--line)] pb-7">
         <div class="flex items-center gap-3 mb-4">
           <div class="section-accent-bar"></div>
-          <span class="text-[11px] uppercase tracking-[0.2em] text-[var(--accent)] font-bold">Document Tracking Dashboard</span>
+          <span class="header-eyebrow text-[11px] uppercase tracking-[0.2em] text-[var(--accent)] font-bold">Document Tracking Dashboard</span>
         </div>
-        <h1 class="page-title text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.08] tracking-tight">
+        <h1 class="page-title font-display text-3xl sm:text-4xl md:text-5xl font-bold leading-[1.08] tracking-tight">
           Manage communications<br>with <span class="text-[var(--accent)]">clarity</span>.
         </h1>
         <p class="page-description mt-4 text-[var(--muted)] max-w-xl text-sm leading-relaxed">

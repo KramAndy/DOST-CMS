@@ -1,11 +1,13 @@
 <?php
-session_start();
+require_once __DIR__ . '/inc/session.php';
+secure_session_start();
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 
 include('inc/auth.php');
 include('config/db.php');
+require_once __DIR__ . '/inc/csrf.php';
 $currentPage = basename($_SERVER['PHP_SELF']);
 $isUsersPage = true;
 
@@ -15,16 +17,28 @@ $breadcrumb = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF guard before any state change.
+    if (!csrf_verify()) {
+        $error = "Invalid request. Please try again.";
+    }
+
+    if (empty($error)) {
     // Sanitize inputs
-    $username = strtolower(trim($_POST['username']));
-    $employee_name = trim($_POST['employee_name']);
-    $password      = trim($_POST['password']);
-    $confirm       = trim($_POST['confirm']);
+    $username = strtolower(trim($_POST['username'] ?? ''));
+    $employee_name = trim($_POST['employee_name'] ?? '');
+    $password      = trim($_POST['password'] ?? '');
+    $confirm       = trim($_POST['confirm'] ?? '');
 	$status = $_POST['status'] ?? '';
-   
-	if (strlen($password) < 4) {
+
+    if (empty($username) || empty($employee_name) || empty($password) || empty($confirm)) {
+        $error = "All fields are required.";
+    }
+    if (empty($error) && strlen($password) < 4) {
 		$error = "Password must be at least 4 characters.";
 	}
+    if (empty($error) && !in_array($status, ['active', 'inactive'], true)) {
+        $status = 'active';
+    }
    // Validate password match
     if (empty($error) && $password !== $confirm) {
         $error = "Passwords do not match.";
@@ -41,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Username already taken.";
     }
 
-} 
+}
 
     // Insert user if no errors
     if (empty($error)) {
@@ -60,11 +74,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		header("Location: users.php?success=1");
 		exit();
 	} else {
-		$error = "Database Error: " . $stmt->error;
+		error_log('[add-users] insert failed: ' . $stmt->error);
+		$error = "Failed to add user. Please try again.";
 		$stmt->close();
 	}
 		}
-		
+
+	}
 }
 ?>
 
@@ -106,7 +122,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     ?>
 	</nav>
+	<?php if (isset($error)): ?>
+	<div class="error-message user-form-error">
+		<i class="fa-solid fa-circle-exclamation"></i>
+		<span><?= htmlspecialchars($error) ?></span>
+	</div>
+	<?php endif; ?>
 	<form method="POST" onsubmit="return validatePasswords();" class="user-form">
+		<?= csrf_field() ?>
 
 		<div class="form-group">
 			<label for="username">Username</label>
@@ -131,16 +154,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		<div class="form-group">
 			<label for="password">Password</label>
 			<div class="input-wrapper">
-				<input type="password" name="password" id="password" class="flat-field w-full px-3 py-2.5 text-sm" required>
-				<i class="fa-solid fa-eye" onclick="toggleVisibility('password', this)"></i>
+				<input type="password" name="password" id="password" class="flat-field w-full px-3 py-2.5 text-sm js-password-field" required>
+				<i class="fa-solid fa-eye js-password-toggle" onclick="toggleVisibility(this)"></i>
 			</div>
 		</div>
 
 		<div class="form-group">
 			<label for="confirm">Confirm Password</label>
 			<div class="input-wrapper">
-				<input type="password" name="confirm" id="confirm" class="flat-field w-full px-3 py-2.5 text-sm" required>
-				<i class="fa-solid fa-eye" onclick="toggleVisibility('confirm', this)"></i>
+				<input type="password" name="confirm" id="confirm" class="flat-field w-full px-3 py-2.5 text-sm js-password-field" required>
+				<i class="fa-solid fa-eye js-password-toggle" onclick="toggleVisibility(this)"></i>
 			</div>
 		</div>
 		<div class="form-group">
@@ -157,6 +180,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		<button class="button-primary px-5 py-2.5 text-sm" type="submit">Create User</button>
 	</form>
 
-<script src="js/login.js"></script>
+	<!-- Toast Notification Area -->
+	<div id="notification-toast-area" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+	<script src="js/utils/dom.js"></script>
+	<script src="js/utils/dates.js"></script>
+	<script src="js/ui/toast.js"></script>
+	<script src="js/services/documentService.js"></script>
+	<script src="js/services/notificationService.js"></script>
+	<script src="js/ui/notifications.js"></script>
+	<script src="js/login.js"></script>
 </body>
 </html>

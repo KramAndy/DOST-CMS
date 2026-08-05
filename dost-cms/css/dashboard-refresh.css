@@ -1,0 +1,388 @@
+/* ============================================================================
+   dashboard-refresh.css
+   Design-system refresh scoped to `body.dashboard-page`.
+
+   Loaded ONLY by dashboard.php. Every selector requires the
+   `body.dashboard-page` ancestor so the shared component classes defined in
+   document.css keep their original look on users.php, add-users.php,
+   edit-users.php and index.php.
+
+   No class names emitted/queried by the JS modules (table.js, timeline.js,
+   toast.js, modal.js, filters.js, app.js) are renamed here — existing
+   classes are restyled in place.
+   ============================================================================ */
+
+/* ── Design tokens (override document.css :root under this scope) ── */
+body.dashboard-page {
+  --bg: #F8FAFC;                              /* Slate 50   */
+  --surface: #FFFFFF;
+  --ink: #000000;
+  --muted: #64748B;                           /* Slate 500  */
+  --line: #E2E8F0;                            /* Slate 200  */
+  --accent: #00aeef;
+  --accent-hover: #0099D5;
+  --accent-dark: #0099D5;
+  --accent-soft: rgba(0, 174, 239, 0.08);
+  --radius: 16px;
+  --radius-sm: 8px;
+
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ── Utility: display font ── */
+body.dashboard-page .font-display {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+}
+
+/* ── Animated gradient blob background ── */
+body.dashboard-page .bg-animated {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: var(--bg);
+}
+body.dashboard-page .blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.15;
+  animation: dashboard-float 20s infinite ease-in-out;
+}
+body.dashboard-page .blob-1 { width: 600px; height: 600px; background: var(--accent); top: -15%; left: -10%; animation-delay: 0s; }
+body.dashboard-page .blob-2 { width: 500px; height: 500px; background: var(--ink); bottom: -15%; right: -10%; animation-delay: 7s; }
+
+@keyframes dashboard-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(40px, -60px) scale(1.1); }
+  66%      { transform: translate(-30px, 40px) scale(0.9); }
+}
+
+/* ── Flat card (mockup `.card`) ── */
+body.dashboard-page .flat-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.2s ease;
+}
+body.dashboard-page .flat-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Buttons (mockup `.btn-primary` / `.btn-secondary` / `.btn-ghost`) ── */
+body.dashboard-page .button-primary {
+  background: var(--ink);
+  color: #fff;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+body.dashboard-page .button-primary:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0, 174, 239, 0.25);
+}
+body.dashboard-page .button-primary:active { transform: scale(0.98); }
+
+body.dashboard-page .button-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+body.dashboard-page .button-secondary:hover {
+  border-color: var(--ink);
+  background: var(--bg);
+}
+
+body.dashboard-page .button-ghost {
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+body.dashboard-page .button-ghost:hover {
+  background: var(--surface);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+body.dashboard-page .button-ghost.is-active-preset {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ── Flat input (mockup `.input-flat`) ── */
+body.dashboard-page .flat-field {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+body.dashboard-page .flat-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 174, 239, 0.12);
+  outline: none;
+  background: var(--surface);
+}
+
+/* ── Filter chips (mockup `.filter-pill`; state class stays `.is-selected`) ── */
+body.dashboard-page .filter-chip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 16px;
+  transition: all 0.2s ease;
+}
+body.dashboard-page .filter-chip:hover { border-color: var(--ink); color: var(--ink); }
+body.dashboard-page .filter-chip.is-selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+
+/* ── Status badges (mockup `.status-badge` + state variants) ── */
+body.dashboard-page .status-indicator {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  letter-spacing: 0;
+}
+body.dashboard-page .status-indicator--received {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  border-color: rgba(0, 174, 239, 0.2);
+}
+body.dashboard-page .status-indicator--received::before { background: var(--accent); }
+body.dashboard-page .status-indicator--processing {
+  background: #FFF8E1;
+  color: #B45309;
+  border-color: #FCD34D;
+}
+body.dashboard-page .status-indicator--processing::before { background: #F59E0B; }
+body.dashboard-page .status-indicator--dispatched {
+  background: #F1F5F9;
+  color: var(--ink);
+  border-color: var(--line);
+}
+body.dashboard-page .status-indicator--dispatched::before { background: var(--ink); }
+
+/* ── Document table rows (mockup `.doc-row` / `.row-expand-content`) ── */
+body.dashboard-page .document-row {
+  transition: background-color 0.15s ease;
+}
+body.dashboard-page .document-row.is-expanded {
+  background: var(--accent-soft);
+  border-bottom-color: transparent;
+}
+body.dashboard-page .ref-number { font-size: 12px; }
+body.dashboard-page .row-detail-panel {
+  background: var(--bg);
+}
+
+/* ── Timeline (mockup `.timeline-item`; static visuals only) ── */
+body.dashboard-page .timeline-entry {
+  padding-bottom: 24px;
+  animation: dashboard-fade-in 0.3s ease;
+}
+body.dashboard-page .timeline-entry::before {
+  border: 2px solid var(--line);
+  background: var(--surface);
+}
+body.dashboard-page .timeline-entry.is-final::before {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+body.dashboard-page .timeline-heading,
+body.dashboard-page .update-form-heading {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+}
+body.dashboard-page .status-preset-button {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+body.dashboard-page .submit-update-button {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 10px 16px;
+}
+
+@keyframes dashboard-fade-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Toast (mockup `.toast`) ── */
+body.dashboard-page .toast-notification {
+  border-radius: 8px;
+  animation: dashboard-toast-in 0.35s ease forwards;
+}
+@keyframes dashboard-toast-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Modal (mockup `.modal-backdrop` / `.modal-content`) ── */
+body.dashboard-page .modal-overlay {
+  background: rgba(15, 23, 42, 0.4);
+}
+body.dashboard-page .modal-panel {
+  border-radius: 16px;
+  border-color: var(--line);
+  padding: 2rem;
+  animation: dashboard-modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes dashboard-modal-pop {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Shared header (additive classes on inc/header.php) ── */
+body.dashboard-page .logo-tile {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+body.dashboard-page .logo-tile .logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+body.dashboard-page .brand-subtitle { letter-spacing: 0.2em; }
+body.dashboard-page .brand-title {
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+body.dashboard-page #notification-bell-button {
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 8px;
+}
+body.dashboard-page .user-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+body.dashboard-page .header-intro {
+  border-top: 1px solid var(--line);
+  padding-top: 2rem;
+}
+body.dashboard-page .section-accent-bar { width: 32px; height: 3px; }
+body.dashboard-page .header-eyebrow {
+  color: var(--accent-dark);
+  letter-spacing: 0.25em;
+}
+body.dashboard-page .page-title {
+  font-size: 2.25rem;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+@media (min-width: 640px) {
+  body.dashboard-page .page-title { font-size: 3rem; }
+}
+@media (min-width: 768px) {
+  body.dashboard-page .page-title { font-size: 3.75rem; }
+}
+body.dashboard-page .page-description {
+  margin-top: 1.25rem;
+  max-width: 42rem;
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+/* ── Dashboard static markup refinements ── */
+body.dashboard-page .stat-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+body.dashboard-page .stat-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+}
+body.dashboard-page .stat-card-value {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+}
+
+body.dashboard-page .generator-heading,
+body.dashboard-page .tracker-heading,
+body.dashboard-page .modal-heading {
+  font-size: 1.125rem;
+}
+
+body.dashboard-page .settings-trigger,
+body.dashboard-page .modal-close-trigger {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  transition: all 0.2s ease;
+}
+body.dashboard-page .settings-trigger:hover,
+body.dashboard-page .modal-close-trigger:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+body.dashboard-page .preview-value {
+  font-size: 1.125rem;
+  color: var(--accent-dark);
+}
+
+/* Date-filter selects: mockup `select.input-flat` arrow treatment */
+body.dashboard-page .date-filter-row select.flat-field {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 2rem 6px 12px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 0.875rem;
+  cursor: pointer;
+}
+
+body.dashboard-page .page-footer {
+  margin-top: 2rem;
+  font-size: 12px;
+}
+
+/* ── Scrollbar (mockup) ── */
+body.dashboard-page ::-webkit-scrollbar { width: 8px; height: 8px; }
+body.dashboard-page ::-webkit-scrollbar-track { background: transparent; }
+body.dashboard-page ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+body.dashboard-page ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  body.dashboard-page .blob { animation: none; }
+  body.dashboard-page *,
+  body.dashboard-page *::before,
+  body.dashboard-page *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

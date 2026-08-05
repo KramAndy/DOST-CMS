@@ -1,5 +1,14 @@
 function querySelector(selector) { return document.querySelector(selector); }
 
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function createHTMLElement(htmlString) {
   const template = document.createElement('template');
   template.innerHTML = htmlString.trim();

@@ -1,9 +1,15 @@
 <?php
 header('Content-Type: application/json');
-session_start();
+require_once __DIR__ . '/../inc/session.php';
+secure_session_start();
 require '../config/db.php';
 require 'helpers.php';
 require 'api_auth.php';
+require_once __DIR__ . '/../inc/csrf.php';
+
+if (!csrf_verify()) {
+    jsonError('Invalid CSRF token', 403);
+}
 
 $updatedBy = $_SESSION['user_id'];
 
@@ -12,6 +18,10 @@ $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
 
 if ($reference === '' || $notes === '') {
     jsonError('Missing fields');
+}
+
+if (strlen($notes) > 2000) {
+    jsonError('Notes are too long');
 }
 
 $stmt = $conn->prepare("SELECT id, status FROM documents WHERE reference_no = ?");

@@ -1,9 +1,9 @@
 var dom = {
   typeSelector: querySelector('#document-type-selector'),
+  directionSelector: querySelector('#document-direction-selector'),
   previewEl: querySelector('#reference-number-preview'),
   titleInput: querySelector('#document-title-input'),
   originInput: querySelector('#originating-office-input'),
-  registeredBy: querySelector('#registered-by'),
   registerBtn: querySelector('#register-document-button')
 };
 
@@ -28,7 +28,7 @@ dom.registerBtn.addEventListener('click', function() {
     showToast('Please provide a title and originating office', 'warn');
     return;
   }
-  registerDocument(dom.typeSelector.value, title, origin, dom.registeredBy.value).then(function(data) {
+  registerDocument(dom.typeSelector.value, title, origin, dom.directionSelector.value).then(function(data) {
     if (!data.success) {
       showToast('Registration failed', 'warn');
       return;
@@ -39,14 +39,8 @@ dom.registerBtn.addEventListener('click', function() {
     renderDocumentTable();
     refreshStatistics();
     showToast('Document ' + data.reference + ' successfully tracked', 'success');
-    setTimeout(function() {
-      var newRow = document.querySelector('tr[data-ref="' + data.reference + '"]');
-      if (newRow) {
-        newRow.classList.add('pulse-glow');
-        currentlyExpandedRef = data.reference;
-        renderDocumentTable();
-      }
-    }, 100);
+  }).catch(function() {
+    showToast('Failed to register document', 'warn');
   });
 });
 

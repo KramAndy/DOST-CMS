@@ -41,6 +41,8 @@ querySelector('#save-format-button').addEventListener('click', function() {
       refreshReferencePreview();
       closeFormatModal();
       showToast('Reference format updated successfully', 'success');
+    } else {
+      showToast('Failed to save settings: ' + (data.message || 'unknown error'), 'warn');
     }
   });
 });

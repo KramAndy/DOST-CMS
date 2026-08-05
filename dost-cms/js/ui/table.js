@@ -1,38 +1,132 @@
+var selectedStatuses = {};
+var editingRef = null;
+
 function buildDocumentRow(doc, isExpanded) {
   var statusModifier = doc.status === 'Received' ? 'status-indicator--received'
     : doc.status === 'Processing' ? 'status-indicator--processing'
     : 'status-indicator--dispatched';
   var tagClass = documentTypeRegistry[doc.type] ? documentTypeRegistry[doc.type].tagClass : 'tag-internal-memo';
+  var role = window.USER_ROLE || '';
+  var canEdit   = role === 'super_admin' || role === 'office_admin';
+  var canDelete = role === 'super_admin';
+
+  var actionHtml =
+    '<div class="flex items-center justify-end gap-1">' +
+      '<button class="row-expand-trigger text-[var(--muted)] hover:text-[var(--accent)] transition-colors p-1.5 rounded" title="' + (isExpanded ? 'Collapse' : 'Expand') + '">' +
+        '<i class="fa-solid ' + (isExpanded ? 'fa-chevron-up' : 'fa-chevron-down') + ' text-[11px]"></i>' +
+      '</button>' +
+      (canEdit
+        ? '<button class="doc-edit-trigger text-[var(--muted)] hover:text-[var(--accent)] transition-colors p-1.5 rounded" title="Edit document">' +
+            '<i class="fa-solid fa-pen text-[10px]"></i>' +
+          '</button>'
+        : '') +
+      (canDelete
+        ? '<button class="doc-delete-trigger text-[var(--muted)] hover:text-red-500 transition-colors p-1.5 rounded" title="Delete document">' +
+            '<i class="fa-solid fa-trash text-[10px]"></i>' +
+          '</button>'
+        : '') +
+    '</div>';
 
   return createHTMLElement(
-    '<tr class="document-row animate-fade-up ' + (isExpanded ? 'is-expanded' : '') + '" data-ref="' + doc.ref + '">' +
+    '<tr class="document-row animate-fade-up ' + (isExpanded ? 'is-expanded' : '') + '" data-ref="' + escapeHtml(doc.ref) + '">' +
       '<td class="px-5 py-3.5 align-top w-[26%]">' +
-        '<div class="ref-number font-mono text-[11px] font-bold text-[var(--ink)]">' + doc.ref + '</div>' +
-        '<span class="document-type-tag ' + tagClass + ' mt-1 inline-block">' + doc.type + '</span>' +
+        '<div class="ref-number font-mono text-[11px] font-bold text-[var(--ink)]">' + escapeHtml(doc.ref) + '</div>' +
+        '<span class="document-type-tag ' + tagClass + ' mt-1 inline-block">' + escapeHtml(doc.type) + '</span>' +
       '</td>' +
       '<td class="px-5 py-3.5 align-top">' +
-        '<div class="doc-title-text font-semibold text-[13px] text-[var(--ink)] leading-snug">' + doc.title + '</div>' +
+        '<div class="doc-title-text font-semibold text-[13px] text-[var(--ink)] leading-snug">' + escapeHtml(doc.title) + '</div>' +
         '<div class="doc-origin-text text-[11px] text-[var(--muted)] mt-1">' +
-          '<div><i class="fa-solid fa-building text-[9px] mr-1 opacity-60"></i>' + doc.origin + '</div>' +
-          '<div class="mt-1"><i class="fa-solid fa-user text-[9px] mr-1 opacity-60"></i>' + doc.registeredBy + '</div>' +
+          '<div><i class="fa-solid fa-building text-[9px] mr-1 opacity-60"></i>' + escapeHtml(doc.origin) + '</div>' +
+          '<div class="mt-1"><i class="fa-solid fa-user text-[9px] mr-1 opacity-60"></i>' + escapeHtml(doc.registeredBy) + '</div>' +
         '</div>' +
       '</td>' +
       '<td class="px-5 py-3.5 align-top hidden md:table-cell">' +
         '<div class="doc-date-text text-[11px] text-[var(--muted)] font-medium whitespace-nowrap">' + formatDisplayDate(doc.date) + '</div>' +
       '</td>' +
       '<td class="px-5 py-3.5 align-top">' +
-        '<span class="status-indicator ' + statusModifier + '">' + doc.status + '</span>' +
+        '<span class="status-indicator ' + statusModifier + '">' + escapeHtml(doc.status) + '</span>' +
       '</td>' +
       '<td class="px-5 py-3.5 align-top text-right">' +
-        '<button class="row-expand-trigger text-[var(--muted)] hover:text-[var(--accent)] transition-colors p-1">' +
-          '<i class="fa-solid ' + (isExpanded ? 'fa-chevron-up' : 'fa-chevron-down') + ' text-xs"></i>' +
-        '</button>' +
+        actionHtml +
       '</td>' +
     '</tr>'
   );
 }
 
 function buildDetailRow(doc, safeId) {
+  if (!(doc.ref in selectedStatuses)) {
+    selectedStatuses[doc.ref] = doc.status;
+  }
+
+  var isEditing = editingRef === doc.ref;
+
+  var typeOptions = '';
+  var typeKeys = Object.keys(documentTypeRegistry);
+  for (var t = 0; t < typeKeys.length; t++) {
+    var tk = typeKeys[t];
+    typeOptions += '<option value="' + tk + '"' + (tk === doc.type ? ' selected' : '') + '>' + tk + '</option>';
+  }
+
+  var updateFormHtml =
+    '<div class="update-form-column">' +
+      '<h4 class="update-form-heading font-bold text-sm mb-4 flex items-center gap-2">' +
+        '<i class="fa-solid fa-pen-to-square text-[var(--accent)] text-xs"></i> Provide Update' +
+      '</h4>' +
+      '<div class="preset-buttons-group mb-4">' +
+        '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-2">Quick Status Presets</label>' +
+        '<div class="preset-buttons-row flex flex-wrap gap-2">' +
+          '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Received' ? 'is-active-preset' : '') + '" data-ref="' + escapeHtml(doc.ref) + '" data-status="Received">Received</button>' +
+          '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Processing' ? 'is-active-preset' : '') + '" data-ref="' + escapeHtml(doc.ref) + '" data-status="Processing">Processing</button>' +
+          '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Dispatched' ? 'is-active-preset' : '') + '" data-ref="' + escapeHtml(doc.ref) + '" data-status="Dispatched">Dispatched</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="update-notes-group">' +
+        '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-1.5">Update Notes</label>' +
+        '<textarea id="update-notes-' + safeId + '" rows="3" placeholder="Enter details about this update..." class="flat-field w-full px-3 py-2.5 text-sm resize-none"></textarea>' +
+      '</div>' +
+      '<button class="submit-update-button button-primary w-full text-[11px] font-medium px-4 py-2.5 flex items-center justify-center gap-2 mt-3" data-ref="' + escapeHtml(doc.ref) + '">' +
+        '<i class="fa-solid fa-paper-plane text-[10px]"></i> Submit Update' +
+      '</button>' +
+    '</div>';
+
+  var editFormHtml =
+    '<div class="update-form-column">' +
+      '<h4 class="update-form-heading font-bold text-sm mb-4 flex items-center gap-2">' +
+        '<i class="fa-solid fa-pen text-[var(--accent)] text-xs"></i> Edit Document' +
+      '</h4>' +
+      '<div class="space-y-3">' +
+        '<div>' +
+          '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-1">Title</label>' +
+          '<input type="text" id="edit-title-' + safeId + '" value="' + escapeHtml(doc.title) + '" class="flat-field w-full px-3 py-2 text-sm" maxlength="255">' +
+        '</div>' +
+        '<div>' +
+          '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-1">Originating Office</label>' +
+          '<input type="text" id="edit-origin-' + safeId + '" value="' + escapeHtml(doc.origin) + '" class="flat-field w-full px-3 py-2 text-sm" maxlength="255">' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-3">' +
+          '<div>' +
+            '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-1">Type</label>' +
+            '<select id="edit-type-' + safeId + '" class="flat-field w-full px-3 py-2 text-sm">' + typeOptions + '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-1">Direction</label>' +
+            '<select id="edit-direction-' + safeId + '" class="flat-field w-full px-3 py-2 text-sm">' +
+              '<option value="Incoming"' + (doc.direction === 'Incoming' ? ' selected' : '') + '>Incoming</option>' +
+              '<option value="Outgoing"' + (doc.direction === 'Outgoing' ? ' selected' : '') + '>Outgoing</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="flex gap-2 mt-4">' +
+        '<button class="edit-save-button button-primary flex-1 text-[11px] font-medium px-4 py-2.5 flex items-center justify-center gap-2" data-ref="' + escapeHtml(doc.ref) + '">' +
+          '<i class="fa-solid fa-check text-[10px]"></i> Save Changes' +
+        '</button>' +
+        '<button class="edit-cancel-button button-ghost flex-1 text-[11px] font-medium px-4 py-2.5 flex items-center justify-center gap-2" data-ref="' + escapeHtml(doc.ref) + '">' +
+          'Cancel' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+
   return createHTMLElement(
     '<tr class="row-detail-panel">' +
       '<td colspan="5" class="px-5 py-6">' +
@@ -47,26 +141,7 @@ function buildDetailRow(doc, safeId) {
               '</div>' +
             '</div>' +
           '</div>' +
-          '<div class="update-form-column">' +
-            '<h4 class="update-form-heading font-bold text-sm mb-4 flex items-center gap-2">' +
-              '<i class="fa-solid fa-pen-to-square text-[var(--accent)] text-xs"></i> Provide Update' +
-            '</h4>' +
-            '<div class="preset-buttons-group mb-4">' +
-              '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-2">Quick Status Presets</label>' +
-              '<div class="preset-buttons-row flex flex-wrap gap-2">' +
-                '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Received' ? 'is-active-preset' : '') + '" data-ref="' + doc.ref + '" data-status="Received">Received</button>' +
-                '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Processing' ? 'is-active-preset' : '') + '" data-ref="' + doc.ref + '" data-status="Processing">Processing</button>' +
-                '<button class="button-ghost text-[11px] font-medium px-3 py-1.5 status-preset-button ' + (doc.status === 'Dispatched' ? 'is-active-preset' : '') + '" data-ref="' + doc.ref + '" data-status="Dispatched">Dispatched</button>' +
-              '</div>' +
-            '</div>' +
-            '<div class="update-notes-group">' +
-              '<label class="form-label text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold block mb-1.5">Update Notes</label>' +
-              '<textarea id="update-notes-' + safeId + '" rows="3" placeholder="Enter details about this update..." class="flat-field w-full px-3 py-2.5 text-sm resize-none"></textarea>' +
-            '</div>' +
-            '<button class="submit-update-button button-primary w-full text-[11px] font-medium px-4 py-2.5 flex items-center justify-center gap-2 mt-3" data-ref="' + doc.ref + '">' +
-              '<i class="fa-solid fa-paper-plane text-[10px]"></i> Submit Update' +
-            '</button>' +
-          '</div>' +
+          (isEditing ? editFormHtml : updateFormHtml) +
         '</div>' +
       '</td>' +
     '</tr>'
@@ -111,7 +186,7 @@ function renderDocumentTable() {
   var emptyMessage = querySelector('#no-documents-message');
   tableBody.innerHTML = '';
 
-  getFilteredDocuments({
+  var pendingRender = getFilteredDocuments({
     type: activeTypeFilter,
     year: activeYearFilter,
     month: activeMonthFilter,
@@ -121,7 +196,7 @@ function renderDocumentTable() {
       emptyMessage.classList.remove('hidden');
     } else {
       emptyMessage.classList.add('hidden');
-      filteredDocuments.slice().reverse().forEach(function(doc) {
+      filteredDocuments.forEach(function(doc) {
         var isExpanded = currentlyExpandedRef === doc.ref;
         tableBody.appendChild(buildDocumentRow(doc, isExpanded));
         if (isExpanded) {
@@ -132,6 +207,7 @@ function renderDocumentTable() {
     }
     loadTimeline(currentlyExpandedRef);
   });
+  return pendingRender;
 }
 
 function refreshStatistics() {
@@ -149,8 +225,23 @@ document.addEventListener('click', function(e) {
       !e.target.closest('.row-expand-trigger') &&
       !e.target.closest('.status-preset-button') &&
       !e.target.closest('.submit-update-button') &&
+      !e.target.closest('.doc-edit-trigger') &&
+      !e.target.closest('.doc-delete-trigger') &&
+      !e.target.closest('.edit-save-button') &&
+      !e.target.closest('.edit-cancel-button') &&
       !e.target.closest('textarea')) {
     currentlyExpandedRef = currentlyExpandedRef === row.dataset.ref ? null : row.dataset.ref;
+    editingRef = null;
+    renderDocumentTable();
+    return;
+  }
+
+  var expandBtn = e.target.closest('.row-expand-trigger');
+  if (expandBtn) {
+    e.stopPropagation();
+    var ref = expandBtn.closest('.document-row').dataset.ref;
+    currentlyExpandedRef = currentlyExpandedRef === ref ? null : ref;
+    editingRef = null;
     renderDocumentTable();
     return;
   }
@@ -158,30 +249,112 @@ document.addEventListener('click', function(e) {
   var presetBtn = e.target.closest('.status-preset-button');
   if (presetBtn) {
     e.stopPropagation();
-    updateStatus(presetBtn.dataset.ref, presetBtn.dataset.status).then(function(data) {
+    var ref = presetBtn.dataset.ref;
+    var status = presetBtn.dataset.status;
+    selectedStatuses[ref] = status;
+    var siblings = presetBtn.parentElement.querySelectorAll('.status-preset-button');
+    for (var i = 0; i < siblings.length; i++) {
+      siblings[i].classList.remove('is-active-preset');
+    }
+    presetBtn.classList.add('is-active-preset');
+    return;
+  }
+
+  var editBtn = e.target.closest('.doc-edit-trigger');
+  if (editBtn) {
+    e.stopPropagation();
+    var ref = editBtn.closest('.document-row').dataset.ref;
+    currentlyExpandedRef = ref;
+    editingRef = ref;
+    renderDocumentTable();
+    return;
+  }
+
+  var deleteBtn = e.target.closest('.doc-delete-trigger');
+  if (deleteBtn) {
+    e.stopPropagation();
+    var rowEl = deleteBtn.closest('.document-row');
+    var ref = rowEl.dataset.ref;
+    var titleEl = rowEl.querySelector('.doc-title-text');
+    var title = titleEl ? titleEl.textContent : ref;
+    if (!confirm('Delete document "' + ref + '"\n\n' + title + '\n\nThis action cannot be undone.')) {
+      return;
+    }
+    deleteDocument(ref).then(function(data) {
       if (data.success) {
+        if (currentlyExpandedRef === ref) {
+          currentlyExpandedRef = null;
+          editingRef = null;
+        }
         renderDocumentTable();
         refreshStatistics();
-        showToast('Status updated to ' + presetBtn.dataset.status, 'success');
+        showToast('Document deleted', 'success');
+      } else {
+        showToast('Failed to delete: ' + (data.message || 'unknown error'), 'warn');
       }
     });
+    return;
+  }
+
+  var saveBtn = e.target.closest('.edit-save-button');
+  if (saveBtn) {
+    e.stopPropagation();
+    var ref = saveBtn.dataset.ref;
+    var safeId = toSafeId(ref);
+    var title     = (document.getElementById('edit-title-' + safeId)      || {}).value || '';
+    var origin    = (document.getElementById('edit-origin-' + safeId)     || {}).value || '';
+    var type      = (document.getElementById('edit-type-' + safeId)       || {}).value || '';
+    var direction = (document.getElementById('edit-direction-' + safeId)  || {}).value || '';
+    title = title.trim();
+    origin = origin.trim();
+    if (!title || !origin) {
+      showToast('Title and originating office are required', 'warn');
+      return;
+    }
+    editDocument(ref, title, origin, type, direction).then(function(data) {
+      if (data.success) {
+        editingRef = null;
+        renderDocumentTable();
+        showToast('Document updated', 'success');
+      } else {
+        showToast('Failed to update: ' + (data.message || 'unknown error'), 'warn');
+      }
+    });
+    return;
+  }
+
+  var cancelBtn = e.target.closest('.edit-cancel-button');
+  if (cancelBtn) {
+    e.stopPropagation();
+    editingRef = null;
+    renderDocumentTable();
     return;
   }
 
   var submitBtn = e.target.closest('.submit-update-button');
   if (submitBtn) {
     e.stopPropagation();
-    var notesField = document.getElementById('update-notes-' + toSafeId(submitBtn.dataset.ref));
+    var ref = submitBtn.dataset.ref;
+    var notesField = document.getElementById('update-notes-' + toSafeId(ref));
     var notes = notesField ? notesField.value.trim() : '';
     if (!notes) {
       showToast('Please enter update notes', 'warn');
       return;
     }
-    addUpdate(submitBtn.dataset.ref, notes).then(function(data) {
+    var status = selectedStatuses[ref];
+    if (!status) {
+      showToast('Please select a status', 'warn');
+      return;
+    }
+    submitUpdate(ref, status, notes).then(function(data) {
       if (data.success) {
         notesField.value = '';
+        delete selectedStatuses[ref];
         renderDocumentTable();
-        showToast('Update added to timeline', 'success');
+        refreshStatistics();
+        showToast('Update submitted successfully', 'success');
+      } else {
+        showToast('Failed to submit update: ' + (data.message || 'unknown error'), 'warn');
       }
     });
   }

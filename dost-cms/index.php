@@ -1,15 +1,22 @@
 <?php
-session_start();
+require_once __DIR__ . '/inc/session.php';
+secure_session_start();
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 
 include('inc/guest.php');
 include('config/db.php');
+require_once __DIR__ . '/inc/csrf.php';
+require_once __DIR__ . '/inc/rbac.php';
+rbac_migrate_roles($conn);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = strtolower(trim($_POST['username']));
-    $password = $_POST['password'];
+    if (!csrf_verify()) {
+        $error = "Invalid request. Please try again.";
+    } else {
+    $username = strtolower(trim($_POST['username'] ?? ''));
+    $password = $_POST['password'] ?? '';
 
     $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
     $stmt->bind_param("s", $username);
@@ -19,19 +26,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($result->num_rows === 1) {
         $user = $result->fetch_assoc();
 
-    if (password_verify($password, $user['password'])) {
+	if (password_verify($password, $user['password'])) {
+        if (strtolower($user['status']) !== 'active') {
+            $_SESSION['login_error'] = 'inactive';
+            header("Location: index.php");
+            exit;
+        }
     session_regenerate_id(true);
     $_SESSION['user_id'] = $user['user_id'];
     $_SESSION['username'] = $user['username'];
     $_SESSION['employee_name'] = $user['employee_name'];
+    $_SESSION['role'] = rbac_is_valid_role($user['role'] ?? '') ? $user['role'] : 'user';
 		header("Location: dashboard.php");
 		exit;
 	}else{
-			$error = "Incorrect Password.";
+			$error = "Invalid username or password.";
 		}
 	}else{
-		$error = "User does not exist!";
+		$error = "Invalid username or password.";
 	}
+    }
 }
 
 
@@ -75,20 +89,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
 		</div>
 		<form method="POST" action="index.php">
+			<?= csrf_field() ?>
 			<div>
 			<label for="username">Username</label>
 			<input type="text" name="username" required placeholder="Username">
 			</div>
 			<div>
 			<label for="password">Password</label>
-			<input type="password" id="password" name="password" required placeholder="Password">
+			<div class="input-wrapper">
+				<input type="password" id="password" name="password" required placeholder="Password" class="js-password-field">
+				<i class="fa-solid fa-eye js-password-toggle" onclick="toggleVisibility(this)"></i>
 			</div>
-			<button class="showPass" type="button" onclick="togglePassword()"><i class="fa-solid fa-eye"></i> Show Password</button>
+			</div>
 			<button class="submit" type="submit">Login</button>
 		</form>
 	</div>
 	</main>
-<script src="js/login.js"></script>
+<?php if (isset($_SESSION['login_error'])): ?>
+<?php if ($_SESSION['login_error'] === 'inactive'): ?>
+<script>
+	window.addEventListener('DOMContentLoaded', function () {
+		showToast('Account Inactive: Your account is currently inactive. Please contact your administrator or the appropriate person in the company to reactivate your account.', 'warn');
+	});
+</script>
+<?php endif; ?>
+<?php unset($_SESSION['login_error']); ?>
+<?php endif; ?>
+	<!-- Toast Notification Area -->
+	<div id="notification-toast-area" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+	<script src="js/utils/dom.js"></script>
+	<script src="js/ui/toast.js"></script>
+	<script src="js/login.js"></script>
 </body>
     
 

@@ -3,11 +3,16 @@ var API_URLS = {
   updates: 'api/get_updates.php',
   updateStatus: 'api/update_status.php',
   addUpdate: 'api/add_update.php',
+  submitUpdate: 'api/submit_update.php',
   register: 'api/register_document.php',
+  editDocument: 'api/edit_document.php',
+  deleteDocument: 'api/delete_document.php',
   statistics: 'api/get_statistics.php',
   referenceSettings: 'api/get_reference_settings.php',
   saveReferenceSettings: 'api/save_reference_settings.php',
-  generateReference: 'api/generate_reference.php'
+  generateReference: 'api/generate_reference.php',
+  notifications: 'api/get_notifications.php',
+  markNotificationRead: 'api/mark_notification_read.php'
 };
 
 function apiGet(url, params) {
@@ -20,6 +25,7 @@ function apiGet(url, params) {
 function apiPost(url, data) {
   var formData = new URLSearchParams();
   Object.keys(data).forEach(function(k) { formData.append(k, data[k]); });
+  if (window.CSRF_TOKEN) formData.append('csrf_token', window.CSRF_TOKEN);
   return fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -43,8 +49,20 @@ function addUpdate(reference, notes) {
   return apiPost(API_URLS.addUpdate, { reference: reference, notes: notes });
 }
 
-function registerDocument(type, title, origin, registeredBy) {
-  return apiPost(API_URLS.register, { type: type, title: title, origin: origin, registered_by: registeredBy });
+function submitUpdate(reference, status, notes) {
+  return apiPost(API_URLS.submitUpdate, { reference: reference, status: status, notes: notes });
+}
+
+function registerDocument(type, title, origin, direction) {
+  return apiPost(API_URLS.register, { type: type, title: title, origin: origin, direction: direction || 'Incoming' });
+}
+
+function editDocument(reference, title, origin, type, direction) {
+  return apiPost(API_URLS.editDocument, { reference: reference, title: title, origin: origin, type: type, direction: direction });
+}
+
+function deleteDocument(reference) {
+  return apiPost(API_URLS.deleteDocument, { reference: reference });
 }
 
 function getStatistics() {

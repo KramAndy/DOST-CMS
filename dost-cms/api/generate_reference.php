@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
-session_start();
+require_once __DIR__ . '/../inc/session.php';
+secure_session_start();
 require '../config/db.php';
 require 'helpers.php';
 require 'api_auth.php';
@@ -12,6 +13,6 @@ if (!in_array($type, $validTypes)) {
     jsonError('Invalid document type');
 }
 
-$reference = generateReferenceNumber($conn, $type);
+$reference = previewReferenceNumber($conn, $type);
 
 jsonSuccess(['reference' => $reference]);

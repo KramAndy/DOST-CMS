@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Communication Management System · DOST Region V</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root {
+    --bg-base: #F8FAFC; /* Slate 50 */
+    --surface: #FFFFFF;
+    --ink: #000000;
+    --muted: #64748B; /* Slate 500 */
+    --line: #E2E8F0; /* Slate 200 */
+    --accent: #00aeef;
+    --accent-dark: #0099D5;
+    --accent-soft: rgba(0, 174, 239, 0.08);
+  }
+  * { -webkit-font-smoothing: antialiased; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-base);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+  .font-display { font-family: 'Space Grotesk', sans-serif; }
+
+  /* === Animated Gradient Background === */
+  .bg-animated {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: -1;
+    overflow: hidden;
+    background: var(--bg-base);
+  }
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(100px);
+    opacity: 0.15;
+    animation: float 20s infinite ease-in-out;
+  }
+  .blob-1 { width: 600px; height: 600px; background: var(--accent); top: -15%; left: -10%; animation-delay: 0s; }
+  .blob-2 { width: 500px; height: 500px; background: var(--ink); bottom: -15%; right: -10%; animation-delay: 7s; }
+  
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -60px) scale(1.1); }
+    66% { transform: translate(-30px, 40px) scale(0.9); }
+  }
+
+  /* === Flat Modern UI Components === */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+  .card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  }
+
+  .btn-primary { 
+    transition: all 0.2s ease; 
+    background: var(--ink); 
+    color: white; 
+    border: 1px solid var(--ink); 
+  }
+  .btn-primary:hover { 
+    background: var(--accent); 
+    border-color: var(--accent); 
+    box-shadow: 0 4px 12px rgba(0, 174, 239, 0.25); 
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  
+  .btn-secondary { 
+    transition: all 0.2s ease; 
+    background: var(--surface); 
+    color: var(--ink); 
+    border: 1px solid var(--line); 
+  }
+  .btn-secondary:hover { 
+    border-color: var(--ink); 
+    background: var(--bg-base); 
+  }
+
+  .btn-ghost { 
+    transition: all 0.2s ease; 
+    background: var(--bg-base); 
+    color: var(--muted); 
+    border: 1px solid var(--line); 
+  }
+  .btn-ghost:hover { 
+    background: var(--surface); 
+    border-color: var(--ink); 
+    color: var(--ink); 
+  }
+
+  .input-flat {
+    transition: all 0.2s ease;
+    background: var(--bg-base);
+    border: 1px solid var(--line);
+  }
+  .input-flat:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 174, 239, 0.12);
+    outline: none;
+    background: var(--surface);
+  }
+
+  /* Filter Pills */
+  .filter-pill {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .filter-pill:hover { border-color: var(--ink); color: var(--ink); }
+  .filter-pill.active { background: var(--ink); border-color: var(--ink); color: white; }
+
+  /* Status Badges */
+  .status-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+  }
+  .status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+  .status-received { background: var(--accent-soft); color: var(--accent-dark); border-color: rgba(0, 174, 239, 0.2); }
+  .status-received::before { background: var(--accent); }
+  .status-processing { background: #FFF8E1; color: #B45309; border-color: #FCD34D; }
+  .status-processing::before { background: #F59E0B; }
+  .status-dispatched { background: #F1F5F9; color: var(--ink); border-color: var(--line); }
+  .status-dispatched::before { background: var(--ink); }
+
+  /* Table Rows */
+  .doc-row { 
+    transition: background-color 0.15s ease; 
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .doc-row.expanded { 
+    background: var(--accent-soft); 
+    border-bottom-color: transparent; 
+  }
+  
+  .row-expand-wrapper {
+    border-bottom: 1px solid var(--line);
+  }
+  
+  .row-expand-content {
+    background: var(--bg-base);
+    animation: slideDown 0.3s ease;
+  }
+  @keyframes slideDown { 
+    from { opacity: 0; transform: translateY(-10px); } 
+    to { opacity: 1; transform: translateY(0); } 
+  }
+
+  /* Timeline */
+  .timeline-item {
+    position: relative;
+    padding-left: 24px;
+    padding-bottom: 24px;
+    border-left: 2px solid var(--line);
+    animation: fadeInRight 0.3s ease;
+  }
+  .timeline-item:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--line);
+  }
+  .timeline-item.active::before {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+  .timeline-item.dark::before {
+    border-color: var(--ink);
+    background: var(--ink);
+  }
+  @keyframes fadeInRight { 
+    from { opacity: 0; transform: translateX(-10px); } 
+    to { opacity: 1; transform: translateX(0); } 
+  }
+
+  @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-slide-up { animation: slideUp 0.3s ease forwards; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .accent-line { display: inline-block; width: 32px; height: 3px; background: var(--accent); margin-right: 12px; vertical-align: middle; }
+  .logo-svg { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+  .logo-svg:hover { transform: rotate(90deg); }
+
+  .toast { animation: toastIn 0.35s ease forwards; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Modal */
+  .modal-backdrop { background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal-content { animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes modalPop { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+  /* Select dropdown arrow */
+  select.input-flat {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    .blob { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Animated Gradient Background -->
+<div class="bg-animated">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+</div>
+
+<div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+
+  <!-- Header -->
+  <header class="mb-8 sm:mb-12">
+    <div class="flex items-center justify-between mb-10 gap-4 flex-wrap">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 bg-white border border-[var(--line)] rounded-xl p-1.5 flex items-center justify-center shadow-sm">
+          <svg viewBox="0 0 100 100" class="logo-svg w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="34" cy="34" r="22" fill="#00aeef"/>
+            <circle cx="66" cy="34" r="22" fill="#000000"/>
+            <circle cx="34" cy="66" r="22" fill="#000000"/>
+            <circle cx="66" cy="66" r="22" fill="#00aeef"/>
+            <circle cx="50" cy="50" r="7" fill="#FFFFFF"/>
+          </svg>
+        </div>
+        <div>
+          <div class="text-[10px] uppercase tracking-[0.2em] text-[var(--muted)] font-semibold">DOST Regional Office No. V</div>
+          <div class="text-base font-bold font-display text-[var(--ink)]">Communication Management System</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="btn-secondary text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-2">
+          <i class="fa-solid fa-bell text-xs"></i> Notifications
+        </button>
+        <div class="w-10 h-10 rounded-full bg-[var(--bg-base)] border border-[var(--line)] flex items-center justify-center text-sm font-bold">JD</div>
+      </div>
+    </div>
+
+    <div class="pt-8 border-t border-[var(--line)]">
+      <div class="text-[11px] uppercase tracking-[0.25em] text-[var(--accent-dark)] font-bold mb-4">
+        <span class="accent-line"></span>Document Tracking Dashboard
+      </div>
+      <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.02] tracking-tight text-[var(--ink)]">
+        Manage <span class="text-[var(--accent)]">communications</span><br>with precision.
+      </h1>
+      <p class="mt-5 text-[var(--muted)] max-w-2xl text-[15px] leading-relaxed">
+        Generate automatic reference numbers, configure formats, and track the lifecycle of official documents in real-time.
+      </p>
+    </div>
+  </header>
+
+  <!-- Main Grid -->
+  <div class="grid lg:grid-cols-3 gap-6 mb-8">
+    
+    <!-- Left Column: Reference Generator -->
+    <div class="lg:col-span-1">
+      <div class="card p-6 sticky top-6">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent-dark)] flex items-center justify-center">
+              <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+            </div>
+            <h2 class="font-display text-lg font-bold text-[var(--ink)]">Reference Generator</h2>
+          </div>
+          <button id="open-config-btn" class="w-9 h-9 rounded-lg btn-secondary flex items-center justify-center text-[var(--muted)] hover:text-[var(--accent)]" title="Configure Format">
+            <i class="fa-solid fa-gear text-sm"></i>
+          </button>
+        </div>
+        
+        <div class="space-y-5">
+          <div>
+            <label class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold">Document Type</label>
+            <select id="doc-type-select" class="input-flat mt-2 w-full px-4 py-3 rounded-lg text-sm font-medium cursor-pointer">
+              <option value="IM">Internal Memo (IM)</option>
+              <option value="EL">External Letters (EL)</option>
+              <option value="SO">Special Order (SO)</option>
+              <option value="OO">Office Order (OO)</option>
+              <option value="MOA">MOA / MOU (MOA)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold">Document Title / Subject</label>
+            <input id="doc-title-input" type="text" placeholder="e.g. Request for IT Equipment Maintenance" class="input-flat mt-2 w-full px-4 py-3 rounded-lg text-sm">
+          </div>
+
+          <div>
+            <label class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold">Originating Office</label>
+            <input id="doc-origin-input" type="text" placeholder="e.g. Office of the Regional Director" class="input-flat mt-2 w-full px-4 py-3 rounded-lg text-sm">
+          </div>
+
+          <div class="mt-6 p-4 rounded-lg bg-[var(--bg-base)] border border-dashed border-[var(--line)]">
+            <div class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1">Generated Reference No.</div>
+            <div id="ref-preview" class="font-mono text-lg font-bold text-[var(--accent-dark)] break-all">R05-CMS-2023-IM-0001</div>
+          </div>
+
+          <button id="generate-btn" class="btn-primary w-full text-sm font-semibold px-6 py-3 rounded-lg flex items-center justify-center gap-2 mt-2">
+            <i class="fa-solid fa-plus text-xs"></i> Register & Track Document
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Tracking System -->
+    <div class="lg:col-span-2">
+      <div class="card overflow-hidden">
+        
+        <div class="p-6 border-b border-[var(--line)]">
+          <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent-dark)] flex items-center justify-center">
+                <i class="fa-solid fa-radar text-sm"></i>
+              </div>
+              <h2 class="font-display text-lg font-bold text-[var(--ink)]">Document Tracker</h2>
+            </div>
+            <div class="relative w-full sm:w-64">
+              <input type="text" id="search-input" placeholder="Search ref no or title..." class="input-flat w-full pl-9 pr-4 py-2 rounded-lg text-sm">
+              <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] text-xs"></i>
+            </div>
+          </div>
+
+          <!-- File Type Filters -->
+          <div class="flex items-center gap-2 overflow-x-auto pb-3">
+            <button class="filter-pill active rounded-lg px-4 py-2 text-xs font-bold whitespace-nowrap" data-filter="ALL">All Documents</button>
+            <button class="filter-pill rounded-lg px-4 py-2 text-xs font-bold whitespace-nowrap" data-filter="IM">Internal Memo</button>
+            <button class="filter-pill rounded-lg px-4 py-2 text-xs font-bold whitespace-nowrap" data-filter="EL">External Letters</button>
+            <button class="filter-pill rounded-lg px-4 py-2 text-xs font-bold whitespace-nowrap" data-filter="SO">Special Order</button>
+            <button class="filter-pill rounded-lg px-4 py-2 text-xs font-bold whitespace-nowrap" data-filter="OO">Office Order</button>
+            <button class="filter-pill rounded-lg px-4 py-2 text-xs font-bold whitespace-nowrap" data-filter="MOA">MOA/MOU</button>
+          </div>
+
+          <!-- Month/Year Filters -->
+          <div class="flex items-center gap-3 mt-4 flex-wrap">
+            <span class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold">Date Filter:</span>
+            <select id="month-filter" class="input-flat px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer w-full sm:w-auto">
+              <option value="ALL">All Months</option>
+              <option value="0">January</option><option value="1">February</option><option value="2">March</option>
+              <option value="3">April</option><option value="4">May</option><option value="5">June</option>
+              <option value="6">July</option><option value="7">August</option><option value="8">September</option>
+              <option value="9">October</option><option value="10">November</option><option value="11">December</option>
+            </select>
+            <select id="year-filter" class="input-flat px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer w-full sm:w-auto">
+              <option value="ALL">All Years</option>
+              <option value="2023" selected>2023</option>
+              <option value="2022">2022</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Document Table Area -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-[var(--bg-base)] text-left text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold border-b border-[var(--line)]">
+                <th class="px-6 py-3">Reference No.</th>
+                <th class="px-6 py-3">Title / Subject</th>
+                <th class="px-6 py-3 hidden md:table-cell">Date</th>
+                <th class="px-6 py-3">Status</th>
+                <th class="px-6 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="doc-tbody"></tbody>
+          </table>
+          <div id="empty-state" class="hidden text-center py-12 px-6">
+            <i class="fa-solid fa-folder-open text-4xl text-[var(--line)] mb-3"></i>
+            <p class="text-sm font-medium text-[var(--muted)]">No documents found matching your criteria.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="mt-8 flex items-center justify-between text-xs text-[var(--muted)] flex-wrap gap-2">
+    <div>Department of Science and Technology · Region V · Bicol</div>
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-[var(--accent)]"></span>
+      <span>Communication Management System v3.0</span>
+    </div>
+  </footer>
+</div>
+
+<!-- Configuration Modal -->
+<div id="config-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+  <div class="modal-backdrop absolute inset-0" id="modal-backdrop"></div>
+  <div class="modal-content card relative p-8 w-full max-w-lg">
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-[var(--accent-soft)] text-[var(--accent-dark)] flex items-center justify-center">
+          <i class="fa-solid fa-sliders text-sm"></i>
+        </div>
+        <h2 class="font-display text-lg font-bold text-[var(--ink)]">Configure Reference Format</h2>
+      </div>
+      <button id="close-config-btn" class="w-9 h-9 rounded-lg btn-secondary flex items-center justify-center text-[var(--muted)]"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold">Prefix (Region/Office)</label>
+        <input id="cfg-prefix" type="text" value="R05-CMS" class="input-flat mt-2 w-full px-4 py-2.5 rounded-lg text-sm font-mono">
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold">Separator</label>
+          <input id="cfg-separator" type="text" value="-" class="input-flat mt-2 w-full px-4 py-2.5 rounded-lg text-sm font-mono">
+        </div>
+        <div>
+          <label class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold">Sequence Padding</label>
+          <input id="cfg-padding" type="number" min="1" max="6" value="4" class="input-flat mt-2 w-full px-4 py-2.5 rounded-lg text-sm">
+        </div>
+      </div>
+      <div class="flex items-center gap-3 pt-2">
+        <input type="checkbox" id="cfg-year" class="w-5 h-5 accent-[var(--accent)] rounded">
+        <label for="cfg-year" class="text-sm font-medium text-[var(--ink)]">Include Current Year in Format</label>
+      </div>
+
+      <div class="mt-5 p-4 rounded-lg bg-[var(--bg-base)] border border-dashed border-[var(--line)]">
+        <div class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold mb-1">Live Preview</div>
+        <div id="cfg-preview" class="font-mono text-lg font-bold text-[var(--accent-dark)] break-all">R05-CMS-2023-IM-0001</div>
+      </div>
+
+      <button id="save-config-btn" class="btn-primary w-full text-sm font-semibold px-6 py-3 rounded-lg flex items-center justify-center gap-2 mt-2">
+        <i class="fa-solid fa-check text-xs"></i> Save Configuration
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-2"></div>
+
+<script>
+  // === STATE & MOCK DATA ===
+  const docTypes = {
+    IM: { name: 'Internal Memo', color: 'bg-[var(--accent-soft)] text-[var(--accent-dark)] border-blue-200' },
+    EL: { name: 'External Letters', color: 'bg-blue-50 text-blue-600 border-blue-200' },
+    SO: { name: 'Special Order', color: 'bg-purple-50 text-purple-600 border-purple-200' },
+    OO: { name: 'Office Order', color: 'bg-green-50 text-green-600 border-green-200' },
+    MOA: { name: 'MOA/MOU', color: 'bg-orange-50 text-orange-600 border-orange-200' }
+  };
+
+  let refFormat = {
+    prefix: 'R05-CMS',
+    separator: '-',
+    padding: 4,
+    includeYear: true
+  };
+
+  let documents = [
+    { 
+      ref: 'R05-CMS-2023-IM-0042', type: 'IM', title: 'Internal Guidelines on Heat Wave Protocol', origin: 'Office of the Regional Director', date: '2023-05-14', status: 'Dispatched', 
+      history: [
+        { ts: '2023-05-15 02:00 PM', status: 'Dispatched', note: 'Mailed out to all division chiefs.' },
+        { ts: '2023-05-14 10:15 AM', status: 'Processing', note: 'Forwarded to Legal Unit for review.' },
+        { ts: '2023-05-14 08:30 AM', status: 'Received', note: 'Document officially logged into the system.' }
+      ]
+    },
+    { 
+      ref: 'R05-CMS-2023-EL-0018', type: 'EL', title: 'Letter to DepEd Region V re: Science Quiz', origin: 'Science Education Section', date: '2023-05-12', status: 'Processing',
+      history: [
+        { ts: '2023-05-12 11:30 AM', status: 'Processing', note: 'Pending signature of Regional Director.' },
+        { ts: '2023-05-12 09:00 AM', status: 'Received', note: 'Received from Science Education Section.' }
+      ]
+    },
+    { 
+      ref: 'R05-CMS-2023-SO-0007', type: 'SO', title: 'Special Order: Reassignment of Personnel', origin: 'Human Resource Unit', date: '2023-05-10', status: 'Received',
+      history: [
+        { ts: '2023-05-10 01:00 PM', status: 'Received', note: 'Draft submitted for approval.' }
+      ]
+    },
+    { 
+      ref: 'R05-CMS-2023-OO-0023', type: 'OO', title: 'Office Order: Utilization of Maintenance Funds', origin: 'Accounting Section', date: '2023-05-08', status: 'Dispatched',
+      history: [
+        { ts: '2023-05-08 03:00 PM', status: 'Dispatched', note: 'Approved and circulated.' },
+        { ts: '2023-05-08 10:00 AM', status: 'Received', note: 'Received from Accounting.' }
+      ]
+    },
+    { 
+      ref: 'R05-CMS-2023-MOA-0004', type: 'MOA', title: 'MOA with Bicol University for Scholarship Program', origin: 'Finance Section', date: '2023-05-05', status: 'Processing',
+      history: [
+        { ts: '2023-05-06 09:00 AM', status: 'Processing', note: 'Under review by Legal Unit.' },
+        { ts: '2023-05-05 11:00 AM', status: 'Received', note: 'Draft MOA received from BU.' }
+      ]
+    },
+  ];
+
+  let currentFilter = 'ALL';
+  let currentMonth = 'ALL';
+  let currentYear = '2023'; 
+  let searchQuery = '';
+  let expandedRef = null; 
+
+  // === HELPERS ===
+  function $(s) { return document.querySelector(s); }
+  function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+
+  function toast(msg, type = 'info') {
+    const colors = { info: 'bg-[var(--ink)]', warn: 'bg-red-500', success: 'bg-[var(--accent-dark)]' };
+    const icons = { info: 'fa-circle-info', warn: 'fa-triangle-exclamation', success: 'fa-circle-check' };
+    const t = el(`<div class="toast ${colors[type]} text-white text-sm px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 max-w-xs"><i class="fa-solid ${icons[type]}"></i>${msg}</div>`);
+    $('#toast-container').appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(10px)'; t.style.transition = 'all 0.3s'; }, 2800);
+    setTimeout(() => t.remove(), 3200);
+  }
+
+  function formatDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function getTimestamp() {
+    const d = new Date();
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+  }
+
+  // === REFERENCE NUMBER GENERATION LOGIC ===
+  function generateRefNumber(type) {
+    const year = new Date().getFullYear();
+    const sep = refFormat.separator;
+    let prefix = refFormat.prefix;
+    
+    if (refFormat.includeYear) {
+      prefix = `${prefix}${sep}${year}`;
+    }
+    
+    const fullPrefix = `${prefix}${sep}${type}${sep}`;
+    
+    const typeDocs = documents.filter(d => d.ref.startsWith(fullPrefix));
+    const maxSeq = typeDocs.reduce((max, d) => {
+      const seq = parseInt(d.ref.split(sep).pop(), 10);
+      return seq > max ? seq : max;
+    }, 0);
+    
+    const newSeq = (maxSeq + 1).toString().padStart(refFormat.padding, '0');
+    return `${fullPrefix}${newSeq}`;
+  }
+
+  function updateRefPreview() {
+    const type = $('#doc-type-select').value;
+    $('#ref-preview').textContent = generateRefNumber(type);
+  }
+
+  // === CONFIG MODAL LOGIC ===
+  function openConfigModal() {
+    $('#cfg-prefix').value = refFormat.prefix;
+    $('#cfg-separator').value = refFormat.separator;
+    $('#cfg-padding').value = refFormat.padding;
+    $('#cfg-year').checked = refFormat.includeYear;
+    updateCfgPreview();
+    $('#config-modal').classList.remove('hidden');
+    $('#config-modal').classList.add('flex');
+  }
+
+  function closeConfigModal() {
+    $('#config-modal').classList.add('hidden');
+    $('#config-modal').classList.remove('flex');
+  }
+
+  function updateCfgPreview() {
+    const p = $('#cfg-prefix').value || 'R05-CMS';
+    const s = $('#cfg-separator').value || '-';
+    const pad = parseInt($('#cfg-padding').value) || 4;
+    const yr = $('#cfg-year').checked;
+    
+    let preview = yr ? `${p}${s}2023${s}IM${s}` : `${p}${s}IM${s}`;
+    preview += "1".padStart(pad, '0');
+    $('#cfg-preview').textContent = preview;
+  }
+
+  $('#open-config-btn').addEventListener('click', openConfigModal);
+  $('#close-config-btn').addEventListener('click', closeConfigModal);
+  $('#modal-backdrop').addEventListener('click', closeConfigModal);
+  $('#cfg-prefix').addEventListener('input', updateCfgPreview);
+  $('#cfg-separator').addEventListener('input', updateCfgPreview);
+  $('#cfg-padding').addEventListener('input', updateCfgPreview);
+  $('#cfg-year').addEventListener('change', updateCfgPreview);
+
+  $('#save-config-btn').addEventListener('click', () => {
+    refFormat.prefix = $('#cfg-prefix').value || 'R05-CMS';
+    refFormat.separator = $('#cfg-separator').value || '-';
+    refFormat.padding = parseInt($('#cfg-padding').value) || 4;
+    refFormat.includeYear = $('#cfg-year').checked;
+    
+    updateRefPreview();
+    closeConfigModal();
+    toast('Reference format updated successfully', 'success');
+  });
+
+  // === TABLE RENDERING (No full re-render on expand) ===
+  function renderTable() {
+    const tbody = $('#doc-tbody');
+    const emptyState = $('#empty-state');
+    tbody.innerHTML = '';
+    
+    let filtered = documents;
+    if (currentFilter !== 'ALL') {
+      filtered = filtered.filter(d => d.type === currentFilter);
+    }
+    if (currentYear !== 'ALL') {
+      filtered = filtered.filter(d => new Date(d.date).getFullYear().toString() === currentYear);
+    }
+    if (currentMonth !== 'ALL') {
+      filtered = filtered.filter(d => new Date(d.date).getMonth().toString() === currentMonth);
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(d => 
+        d.ref.toLowerCase().includes(q) || 
+        d.title.toLowerCase().includes(q) ||
+        d.origin.toLowerCase().includes(q)
+      );
+    }
+
+    if (filtered.length === 0) {
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+      
+      filtered.slice().reverse().forEach(doc => {
+        const statusClass = doc.status === 'Received' ? 'status-received' 
+                          : doc.status === 'Processing' ? 'status-processing' 
+                          : 'status-dispatched';
+        
+        const row = el(`
+          <tr class="doc-row animate-slide-up" data-ref="${doc.ref}">
+            <td class="px-6 py-4 align-top w-1/4">
+              <div class="font-mono text-xs font-bold text-[var(--ink)]">${doc.ref}</div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded mt-1 inline-block border ${docTypes[doc.type].color}">${doc.type}</span>
+            </td>
+            <td class="px-6 py-4 align-top">
+              <div class="font-semibold text-[13px] text-[var(--ink)] leading-tight">${doc.title}</div>
+              <div class="text-[11px] text-[var(--muted)] mt-1"><i class="fa-solid fa-building text-[9px] mr-1"></i>${doc.origin}</div>
+            </td>
+            <td class="px-6 py-4 align-top hidden md:table-cell">
+              <div class="text-xs text-[var(--muted)] font-medium whitespace-nowrap">${formatDate(doc.date)}</div>
+            </td>
+            <td class="px-6 py-4 align-top">
+              <span class="status-badge ${statusClass}">${doc.status}</span>
+            </td>
+            <td class="px-6 py-4 align-top text-right">
+              <button class="text-[var(--muted)] hover:text-[var(--accent)] transition-colors p-2 expand-icon">
+                <i class="fa-solid fa-chevron-down"></i>
+              </button>
+            </td>
+          </tr>
+        `);
+        tbody.appendChild(row);
+      });
+    }
+
+    // Bind row clicks
+    document.querySelectorAll('.doc-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        const ref = row.dataset.ref;
+        toggleExpand(ref);
+      });
+    });
+
+    // Re-open previously expanded row if it still exists
+    if (expandedRef) {
+      const row = document.querySelector(`.doc-row[data-ref="${expandedRef}"]`);
+      if (row) openRow(row, expandedRef);
+    }
+  }
+
+  // === SURGICAL EXPANSION LOGIC ===
+  function toggleExpand(ref) {
+    const row = document.querySelector(`.doc-row[data-ref="${ref}"]`);
+    if (!row) return;
+    
+    const isExpanded = row.classList.contains('expanded');
+    
+    // Close any currently open rows
+    document.querySelectorAll('.doc-row.expanded').forEach(r => {
+      if (r !== row) closeRow(r);
+    });
+
+    if (isExpanded) {
+      closeRow(row);
+      expandedRef = null;
+    } else {
+      openRow(row, ref);
+      expandedRef = ref;
+    }
+  }
+
+  function closeRow(row) {
+    row.classList.remove('expanded');
+    const icon = row.querySelector('.expand-icon i');
+    if (icon) icon.className = 'fa-solid fa-chevron-down';
+    
+    const expandRow = row.nextElementSibling;
+    if (expandRow && expandRow.classList.contains('row-expand-wrapper')) {
+      expandRow.remove();
+    }
+  }
+
+  function openRow(row, ref) {
+    row.classList.add('expanded');
+    const icon = row.querySelector('.expand-icon i');
+    if (icon) icon.className = 'fa-solid fa-chevron-up';
+    
+    const doc = documents.find(d => d.ref === ref);
+    const safeRef = ref.replace(/[^a-zA-Z0-9]/g, '');
+    
+    const expandRow = el(`
+      <tr class="row-expand-wrapper">
+        <td colspan="5" class="p-0">
+          <div class="row-expand-content">
+            <div class="p-6 grid md:grid-cols-2 gap-8">
+              <div>
+                <h4 class="font-display font-bold text-sm mb-5 flex items-center gap-2 text-[var(--ink)]">
+                  <i class="fa-solid fa-clock-rotate-left text-[var(--accent-dark)]"></i> Chronological Updates
+                </h4>
+                <div id="timeline-container-${safeRef}" class="px-2">
+                  ${doc.history.map((h, idx) => `
+                    <div class="timeline-item ${idx === 0 ? 'active' : ''} ${h.status === 'Dispatched' ? 'dark' : ''}">
+                      <div class="text-[10px] text-[var(--muted)] font-bold uppercase">${h.ts}</div>
+                      <div class="font-semibold text-sm mt-1 text-[var(--ink)]">${h.status}</div>
+                      <p class="text-xs text-[var(--muted)] mt-1 leading-relaxed">${h.note}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <div>
+                <h4 class="font-display font-bold text-sm mb-5 flex items-center gap-2 text-[var(--ink)]">
+                  <i class="fa-solid fa-pen-to-square text-[var(--accent-dark)]"></i> Provide Update
+                </h4>
+                <div class="mb-4">
+                  <label class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold">Quick Status Presets</label>
+                  <div class="flex flex-wrap gap-2 mt-2">
+                    <button class="btn-ghost text-xs font-semibold px-3 py-1.5 rounded-lg preset-btn" data-ref="${doc.ref}" data-status="Received">Received</button>
+                    <button class="btn-ghost text-xs font-semibold px-3 py-1.5 rounded-lg preset-btn" data-ref="${doc.ref}" data-status="Processing">Processing</button>
+                    <button class="btn-ghost text-xs font-semibold px-3 py-1.5 rounded-lg preset-btn" data-ref="${doc.ref}" data-status="Dispatched">Dispatched</button>
+                  </div>
+                </div>
+                <div>
+                  <label class="text-[10px] uppercase tracking-wider text-[var(--muted)] font-bold">Update Notes</label>
+                  <textarea id="update-notes-${safeRef}" rows="3" placeholder="Enter details about this update..." class="input-flat mt-2 w-full px-4 py-2.5 rounded-lg text-sm resize-none"></textarea>
+                </div>
+                <button class="btn-primary w-full text-xs font-semibold px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 mt-3 submit-update-btn" data-ref="${doc.ref}">
+                  <i class="fa-solid fa-paper-plane text-[10px]"></i> Submit Update
+                </button>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `);
+    
+    row.after(expandRow);
+    bindExpandEvents(expandRow, ref);
+  }
+
+  function bindExpandEvents(expandRow, ref) {
+    const safeRef = ref.replace(/[^a-zA-Z0-9]/g, '');
+    
+    expandRow.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const status = btn.dataset.status;
+        const doc = documents.find(d => d.ref === ref);
+        if (doc) {
+          const newEntry = { ts: getTimestamp(), status: status, note: `Status automatically updated to ${status}.` };
+          doc.status = status;
+          doc.history.unshift(newEntry);
+          
+          // Surgically update UI
+          updateDocStatusUI(ref, status);
+          addTimelineItem(ref, newEntry);
+          
+          toast(`Status updated to ${status}`, 'success');
+        }
+      });
+    });
+
+    const submitBtn = expandRow.querySelector('.submit-update-btn');
+    if (submitBtn) {
+      submitBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const doc = documents.find(d => d.ref === ref);
+        const notesArea = expandRow.querySelector(`#update-notes-${safeRef}`);
+        if (doc && notesArea && notesArea.value.trim()) {
+          const newEntry = { ts: getTimestamp(), status: doc.status, note: notesArea.value.trim() };
+          doc.history.unshift(newEntry);
+          notesArea.value = '';
+          
+          addTimelineItem(ref, newEntry);
+          toast('Update added to timeline', 'success');
+        } else if (doc && notesArea && !notesArea.value.trim()) {
+          toast('Please enter update notes', 'warn');
+        }
+      });
+    }
+  }
+
+  function updateDocStatusUI(ref, status) {
+    const row = document.querySelector(`.doc-row[data-ref="${ref}"]`);
+    if (!row) return;
+    const badge = row.querySelector('.status-badge');
+    if (badge) {
+      badge.className = `status-badge ${status === 'Received' ? 'status-received' : status === 'Processing' ? 'status-processing' : 'status-dispatched'}`;
+      badge.textContent = status;
+    }
+  }
+
+  function addTimelineItem(ref, item) {
+    const safeRef = ref.replace(/[^a-zA-Z0-9]/g, '');
+    const container = document.getElementById(`timeline-container-${safeRef}`);
+    if (!container) return;
+    
+    // Remove 'active' from old first item
+    const oldActive = container.querySelector('.timeline-item.active');
+    if (oldActive) oldActive.classList.remove('active');
+    
+    const newItem = el(`
+      <div class="timeline-item active ${item.status === 'Dispatched' ? 'dark' : ''}">
+        <div class="text-[10px] text-[var(--muted)] font-bold uppercase">${item.ts}</div>
+        <div class="font-semibold text-sm mt-1 text-[var(--ink)]">${item.status}</div>
+        <p class="text-xs text-[var(--muted)] mt-1 leading-relaxed">${item.note}</p>
+      </div>
+    `);
+    container.prepend(newItem);
+  }
+
+  // === EVENT BINDINGS ===
+  $('#doc-type-select').addEventListener('change', updateRefPreview);
+
+  $('#generate-btn').addEventListener('click', () => {
+    const type = $('#doc-type-select').value;
+    const title = $('#doc-title-input').value.trim();
+    const origin = $('#doc-origin-input').value.trim();
+
+    if (!title || !origin) {
+      toast('Please provide a title and originating office', 'warn');
+      return;
+    }
+
+    const newRef = generateRefNumber(type);
+    const newDoc = {
+      ref: newRef,
+      type: type,
+      title: title,
+      origin: origin,
+      date: new Date().toISOString().split('T')[0],
+      status: 'Received',
+      history: [
+        { ts: getTimestamp(), status: 'Received', note: 'Document officially registered into the tracking system.' }
+      ]
+    };
+
+    documents.push(newDoc);
+    
+    $('#doc-title-input').value = '';
+    $('#doc-origin-input').value = '';
+    
+    updateRefPreview();
+    
+    // Set filters to view the new doc easily
+    currentYear = new Date().getFullYear().toString();
+    $('#year-filter').value = currentYear;
+    currentMonth = new Date().getMonth().toString();
+    $('#month-filter').value = currentMonth;
+    currentFilter = 'ALL';
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    document.querySelector('.filter-pill[data-filter="ALL"]').classList.add('active');
+    
+    expandedRef = newRef; // Auto-expand the new document
+    renderTable();
+    toast(`Document ${newRef} successfully tracked`, 'success');
+  });
+
+  document.querySelectorAll('.filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      currentFilter = pill.dataset.filter;
+      renderTable();
+    });
+  });
+
+  $('#month-filter').addEventListener('change', (e) => {
+    currentMonth = e.target.value;
+    renderTable();
+  });
+
+  $('#year-filter').addEventListener('change', (e) => {
+    currentYear = e.target.value;
+    renderTable();
+  });
+
+  $('#search-input').addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    renderTable();
+  });
+
+  // Init
+  updateRefPreview();
+  renderTable();
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+==============================================================================
+DOST CMS — FINAL REVIEW & POLISH REPORT (Phase 2)
+==============================================================================
+Date: Aug 05, 2026
+Scope: UI/UX consistency, code cleanup, validation, DB consistency, stability
+Result: PASS — no known functional or stability defects remain.
+
+==============================================================================
+1. PHASE 1 — FUNCTIONAL WALKTHROUGH
+==============================================================================
+Every workflow was exercised end-to-end against the live app
+(php -S with error_reporting=E_ALL, display_errors=1):
+
+  - Login (success + redirect), logout (session destroyed)
+  - Inactive account login DENIED (toast shown, login form retained,
+    no session created, dashboard still redirects to index)
+  - Dashboard load (no PHP warnings/errors), statistics render
+  - Document registration (all 5 types, Incoming/Outgoing)
+  - Status transitions Received -> Processing -> Dispatched (incl. presets)
+  - Timeline updates + chronological ordering
+  - Notifications created on register/dispatch, mark read, mark all read
+  - User add / edit / activate / deactivate
+
+Result: 29/29 workflows pass. Two earlier "failures" were confirmed as test
+artifacts (cookie/session confusion in the test harness), not app defects.
+
+==============================================================================
+2. PHASE 2 — UI/UX CONSISTENCY FIXES
+==============================================================================
+[FIX] dashboard.php
+  - Added a "Loading documents..." placeholder row inside the document table
+    body so the table is never blank during the initial fetch.
+  - #no-documents-message now starts hidden; it is only shown after the first
+    render when the filtered result set is actually empty. This removes the
+    misleading flash of "No documents yet" while documents are loading.
+  - js/ui/table.js already adds/removes the 'hidden' class correctly on render.
+
+[FIX] js/ui/table.js
+  - Failed status updates and failed timeline updates now show a warning toast
+    ("Failed to update status: <reason>") instead of silently doing nothing.
+
+[FIX] js/ui/modal.js
+  - Failed reference-format saves now show a warning toast instead of silently
+    doing nothing.
+
+[FIX] js/app.js
+  - Registration now catches fetch/network failures and shows
+    "Failed to register document" instead of an unhandled rejection.
+
+[FIX] inc/header.php + css/document.css
+  - Removed the empty .notification-dropdown-footer div (a stray empty bar
+    under the notification list) and its orphaned CSS rules.
+
+==============================================================================
+3. PHASE 3 — CODE CLEANUP (no behavior change)
+==============================================================================
+[REMOVED] Dead hidden input #registered-by
+  - dashboard.php, js/app.js (dom.registeredBy), js/services/documentService.js
+    (registered_by POST param). The server always sets registered_by from the
+    session user_id (api/register_document.php line 9), so the field was never
+    used.
+
+[REMOVED] Dead "pulse-glow" block in js/app.js
+  - Added a class then immediately re-rendered the table, which wiped the
+    class out — it could never have any visual effect.
+
+[REMOVED] Unused runOverdueCheck() wrapper + API_URLS.runOverdueCheck entry
+  - Nothing in the UI called it. NOTE: api/run_overdue_check.php itself was
+    KEPT because it is documented as a cron/scheduled-task entry point
+    (inc/notifications.php checkOverdueDocuments() runs opportunistically
+    from api/get_notifications.php).
+
+[REMOVED] Dead viewAllNotificationsLink block in js/ui/notifications.js
+  - Queried #view-all-notifications, which no longer exists in the markup.
+
+==============================================================================
+4. PHASE 4 — DATA VALIDATION
+==============================================================================
+[FIX] js/login.js validatePasswords()
+  - The submit button is now disabled on a valid submit (Add/Edit User forms),
+    preventing double-submission. If validation fails, the button is NOT
+    disabled, so the user can correct and retry.
+
+Already correct (verified, no change needed):
+  - Required fields enforced via HTML 'required' plus server-side checks.
+  - Duplicate username / password mismatch -> error banner on the form.
+  - Invalid document type / missing title-origin -> "Invalid or missing
+    fields" from the API.
+  - Success feedback on every mutation (toasts on dashboard, redirect banner
+    on users.php).
+
+==============================================================================
+5. PHASE 5 — DB CONSISTENCY
+==============================================================================
+  - get_documents.php returns newest-first (ORDER BY id DESC) — confirmed the
+    just-registered document appears first.
+  - created_at/status columns populated automatically on insert/update.
+  - documents = 5, users = 2, notifications = 0 (restored to pre-test state).
+  - No orphaned notifications; test documents/notifications removed after
+    every e2e run.
+
+==============================================================================
+6. PHASE 6 — STABILITY
+==============================================================================
+  - php -l: all PHP files clean (no syntax errors).
+  - node --check: all JS files clean.
+  - Asset audit: every local css/js/image referenced by src/href exists.
+  - Link audit: every .php link target exists.
+  - Full e2e regression after all edits: login -> dashboard render
+    (no PHP warnings) -> register -> status update -> notifications -> cleanup
+    all pass.
+
+==============================================================================
+7. CHANGED FILES (this phase)
+==============================================================================
+  dashboard.php
+  inc/header.php
+  css/document.css
+  js/app.js
+  js/login.js
+  js/ui/table.js
+  js/ui/modal.js
+  js/ui/notifications.js
+  js/services/documentService.js
+  js/services/notificationService.js
+
+==============================================================================
+8. NOTES
+==============================================================================
+  - The seeded admin password is "admin" (matches the hash in dost-cms.sql);
+    "admin123" does not verify. This is seed data, not a code defect.
+  - Intentional design constraints preserved: status enum is
+    Received/Processing/Dispatched (no Draft/Released) and there is no
+    delete-user / archive-restore feature. Not treated as bugs.
+
+==============================================================================
+VERDICT: READY FOR PRODUCTION USE.
+==============================================================================

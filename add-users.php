@@ -1,0 +1,273 @@
+<?php
+require_once __DIR__ . '/inc/session.php';
+secure_session_start();
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+include('inc/auth.php');
+include('config/db.php');
+require_once __DIR__ . '/inc/rbac.php';
+require_once __DIR__ . '/inc/db_integrity.php';
+require_once __DIR__ . '/inc/csrf.php';
+require_once __DIR__ . '/inc/scope.php';
+rbac_migrate_roles($conn);
+rbac_sync_session_role($conn);
+rbac_require_any($conn, ['super_admin', 'office_admin']);
+ensure_db_integrity($conn);
+$currentPage = basename($_SERVER['PHP_SELF']);
+$isUsersPage = true;
+$currentUserRole = rbac_current_role();
+
+$breadcrumb = [
+    'Users' => 'users.php',
+    'Add User' => null
+];
+
+// Fetch active offices for assignment dropdown.
+// Office Administrators may only assign users to their own office.
+if ($currentUserRole === 'office_admin') {
+    $officeId = scope_office_id();
+    $officesResult = $conn->prepare("SELECT office_id, office_name FROM offices WHERE status = 'active' AND office_id = ?");
+    if ($officesResult) {
+        $officesResult->bind_param('i', $officeId);
+        $officesResult->execute();
+        $officesResult = $officesResult->get_result();
+    }
+} else {
+    $officesResult = $conn->query("SELECT office_id, office_name FROM offices WHERE status = 'active' ORDER BY office_code ASC");
+}
+$offices = [];
+if ($officesResult) {
+    while ($o = $officesResult->fetch_assoc()) {
+        $offices[] = $o;
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF guard before any state change.
+    if (!csrf_verify()) {
+        $error = "Invalid request. Please try again.";
+    }
+
+    if (empty($error)) {
+    // Sanitize inputs
+    $username = strtolower(trim($_POST['username'] ?? ''));
+    $employee_name = trim($_POST['employee_name'] ?? '');
+    $password      = trim($_POST['password'] ?? '');
+    $confirm       = trim($_POST['confirm'] ?? '');
+	$status = $_POST['status'] ?? '';
+    $office_id = (int)($_POST['office_id'] ?? 0);
+
+    if (empty($username) || empty($employee_name) || empty($password) || empty($confirm)) {
+        $error = "All fields are required.";
+    }
+    if (empty($error) && $office_id <= 0) {
+        $error = "Office assignment is required.";
+    }
+    if (empty($error) && strlen($password) < 4) {
+		$error = "Password must be at least 4 characters.";
+	}
+    if (empty($error) && strlen($username) > 20) {
+        $error = "Username must be 20 characters or fewer.";
+    }
+    if (empty($error) && strlen($employee_name) > 50) {
+        $error = "Full name must be 50 characters or fewer.";
+    }
+    if (empty($error) && strlen($password) > 72) {
+        $error = "Password must be 72 characters or fewer.";
+    }
+    if (empty($error) && !in_array($status, ['active', 'inactive'], true)) {
+        $status = 'active';
+    }
+    // Role assignment: only Super Administrators may assign elevated roles.
+    // Office Administrators can only create regular users.
+    $role = 'user';
+    if ($currentUserRole === 'super_admin') {
+        $postedRole = $_POST['role'] ?? 'user';
+        $role = rbac_is_valid_role($postedRole) ? $postedRole : 'user';
+    }
+   // Validate password match
+    if (empty($error) && $password !== $confirm) {
+        $error = "Passwords do not match.";
+    }
+
+    // Check if username already exists
+    if (empty($error)) {
+    $stmt = $conn->prepare("SELECT user_id FROM users WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $existing = $stmt->get_result();
+	$stmt->close();
+    if ($existing->num_rows > 0) {
+        $error = "Username already taken.";
+    }
+
+}
+
+    // Insert user if no errors
+    if (empty($error)) {
+        $hashed = password_hash($password, PASSWORD_DEFAULT);
+
+        $stmt = $conn->prepare("
+			INSERT INTO users (username, employee_name, password, status, role, office_id) 
+			VALUES (?, ?, ?, ?, ?, ?)
+		");
+        if (!$stmt) {
+            error_log('[add-users] insert prepare failed: ' . $conn->error);
+            $error = "Failed to add user. Please try again.";
+        } else {
+            $stmt->bind_param(
+                "sssssi",
+                $username, $employee_name, $hashed, $status, $role, $office_id
+            );
+
+            if ($stmt->execute()) {
+                header("Location: users.php?success=1");
+                exit();
+            } else {
+                // Unique-index violation is a race between the pre-check and
+                // the insert (two concurrent identical requests) - report it
+                // as a duplicate username instead of a generic failure.
+                if ($stmt->errno === 1062) {
+                    $error = "Username already taken.";
+                } else {
+                    error_log('[add-users] insert failed: ' . $stmt->error);
+                    $error = "Failed to add user. Please try again.";
+                }
+                $stmt->close();
+            }
+        }
+    }
+
+	}
+}
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Communication Management System · DOST Region V</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/document.css">
+</head>
+<body>
+
+  <!-- Top Accent Stripe -->
+  <div class="h-[3px] bg-[var(--accent)]"></div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+
+    <!-- ======================== PAGE HEADER ======================== -->
+<?php include('inc/header.php'); ?>
+	<nav class="breadcrumb">
+    <?php
+    $last = array_key_last($breadcrumb);
+
+    foreach ($breadcrumb as $label => $link) {
+        if ($link && $label !== $last) {
+            echo "<a href=\"$link\">$label</a>";
+        } else {
+            echo "<span>$label</span>";
+        }
+
+        if ($label !== $last) {
+            echo '<i class="fa-solid fa-chevron-right separator"></i>';
+        }
+    }
+    ?>
+	</nav>
+	<?php if (isset($error)): ?>
+	<div class="error-message user-form-error">
+		<i class="fa-solid fa-circle-exclamation"></i>
+		<span><?= htmlspecialchars($error) ?></span>
+	</div>
+	<?php endif; ?>
+	<form method="POST" onsubmit="return validatePasswords();" class="user-form">
+		<?= csrf_field() ?>
+
+		<div class="form-group">
+			<label for="username">Username</label>
+			<input
+				type="text"
+				name="username"
+				value="<?= htmlspecialchars($_POST['username'] ?? '') ?>"
+				class="flat-field w-full px-3 py-2.5 text-sm"
+				required>
+		</div>
+
+		<div class="form-group">
+			<label for="employee_name">Full Name</label>
+			<input
+				type="text"
+				name="employee_name"
+				value="<?= htmlspecialchars($_POST['employee_name'] ?? '') ?>"
+				class="flat-field w-full px-3 py-2.5 text-sm"
+				required>
+		</div>
+		
+		<div class="form-group">
+			<label for="password">Password</label>
+			<div class="input-wrapper">
+				<input type="password" name="password" id="password" class="flat-field w-full px-3 py-2.5 text-sm js-password-field" required>
+				<i class="fa-solid fa-eye js-password-toggle" onclick="toggleVisibility(this)"></i>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="confirm">Confirm Password</label>
+			<div class="input-wrapper">
+				<input type="password" name="confirm" id="confirm" class="flat-field w-full px-3 py-2.5 text-sm js-password-field" required>
+				<i class="fa-solid fa-eye js-password-toggle" onclick="toggleVisibility(this)"></i>
+			</div>
+		</div>
+		<div class="form-group">
+			<label class="text-sm font-medium block mb-2">Status</label>
+			<label class="inline-flex items-center gap-2 mr-4 text-sm">
+<input type="radio" name="status" value="active" checked>
+            Active
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm">
+            <input type="radio" name="status" value="inactive">
+            Inactive
+			</label>
+		</div>
+		<?php if ($currentUserRole === 'super_admin'): ?>
+		<div class="form-group">
+			<label for="role">Role</label>
+			<select name="role" id="role" class="flat-field w-full px-3 py-2.5 text-sm">
+				<option value="user" <?= ($_POST['role'] ?? 'user') === 'user' ? 'selected' : '' ?>>User</option>
+				<option value="office_admin" <?= ($_POST['role'] ?? '') === 'office_admin' ? 'selected' : '' ?>>Office Administrator</option>
+				<option value="super_admin" <?= ($_POST['role'] ?? '') === 'super_admin' ? 'selected' : '' ?>>Super Administrator</option>
+			</select>
+		</div>
+		<?php endif; ?>
+		<div class="form-group">
+			<label for="office_id">Assigned Office</label>
+			<select name="office_id" id="office_id" class="flat-field w-full px-3 py-2.5 text-sm" required>
+				<option value="">-- Select Office --</option>
+				<?php foreach ($offices as $office): ?>
+				<option value="<?= (int)$office['office_id'] ?>" <?= (int)($_POST['office_id'] ?? 0) === (int)$office['office_id'] ? 'selected' : '' ?>><?= htmlspecialchars($office['office_name']) ?></option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+		<button class="button-primary px-5 py-2.5 text-sm" type="submit">Create User</button>
+	</form>
+
+	<!-- Toast Notification Area -->
+	<div id="notification-toast-area" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+	<script src="js/utils/dom.js"></script>
+	<script src="js/utils/dates.js"></script>
+	<script src="js/ui/toast.js"></script>
+	<script src="js/services/documentService.js"></script>
+	<script src="js/services/notificationService.js"></script>
+	<script src="js/ui/notifications.js"></script>
+	<script src="js/login.js"></script>
+</body>
+</html>
